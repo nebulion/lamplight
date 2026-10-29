@@ -1,0 +1,50 @@
+{
+ "_about": "The job interview (D42, SHARE-DESIGN phase 3): what the person wants, so Claude can write their scan (data/SCAN.md) and sort every job into want = ideal / good / fallback, or leave it out. interview.js builds the screens from this; app/person.py checks saved answers against it. Kinds: pick (one), multi (several), text, grid (each row one of the columns), sort (each card one tier).",
+ "rounds": [
+  { "key": "work", "title": "The work itself", "lede": "What you'd like your days to be made of.", "questions": [
+   { "key": "day", "kind": "multi", "max": 3, "label": "Most of your day, up to three", "options": ["Hands-on: fixing and building things", "At a desk with data or computers", "With people: serving, helping, teaching", "Outdoors", "Making things: food, crafts, design", "Organising: planning and logistics", "Caring for people or animals"] },
+   { "key": "fields", "kind": "multi", "label": "Fields that interest you", "options": ["IT and tech support", "Software", "Transit and transport", "Cities and public works", "Utilities and energy", "Maps and GIS", "Healthcare", "Education", "Libraries and museums", "Parks and the outdoors", "Food and coffee", "Shops", "Hotels and hospitality", "Arts, music and venues", "Sport and fitness", "Trades and repair", "Office and admin", "Nonprofits and community", "Science and labs", "Media and writing"] },
+   { "key": "fieldsOther", "kind": "text", "label": "Any other fields, or your top three in order" },
+   { "key": "loved", "kind": "text", "label": "In past jobs or school, what did you most enjoy doing?" },
+   { "key": "drained", "kind": "text", "label": "What drained you?" },
+   { "key": "future", "kind": "text", "label": "Where would you like to be in five years?" },
+   { "key": "incomeOnly", "kind": "text", "label": "Jobs you'd take just for the income right now (they'll count as fallback)" }
+  ]},
+  { "key": "place", "title": "Place and setting", "lede": "Where, and what kind of workplace.", "questions": [
+   { "key": "cities", "kind": "text", "label": "Cities, best first (or \"remote\")" },
+   { "key": "move", "kind": "pick", "label": "Would you move for the right job?", "options": ["Yes", "Maybe", "No"] },
+   { "key": "mode", "kind": "multi", "label": "Ways of working you'd take", "options": ["On site", "Hybrid", "Remote"] },
+   { "key": "car", "kind": "pick", "label": "Getting there", "options": ["I have a car", "Licence, no car", "No licence: transit, bike or walking"] },
+   { "key": "commute", "kind": "pick", "label": "Longest commute, one way", "options": ["15 minutes", "30 minutes", "45 minutes", "An hour"] },
+   { "key": "employers", "kind": "grid", "label": "Kinds of employer", "rows": ["Government", "Nonprofit", "Big company", "Small business", "Startup", "University", "Hospital", "Resort or park"], "cols": ["Love", "OK", "Avoid"] },
+   { "key": "size", "kind": "pick", "label": "Size of the place", "options": ["Small and local", "No preference", "Big and structured"] },
+   { "key": "setting", "kind": "pick", "label": "Indoors or out", "options": ["Indoors", "A mix", "Outdoors"] },
+   { "key": "physical", "kind": "pick", "label": "Physical work", "options": ["Desk only", "Some lifting is fine", "Physical work is fine"] }
+  ]},
+  { "key": "hours", "title": "Hours and money", "lede": "What you need, and what you'd rather avoid.", "questions": [
+   { "key": "hours", "kind": "multi", "label": "Kinds of job you'd take", "options": ["Full-time", "Part-time", "Seasonal", "Temporary", "Contract"] },
+   { "key": "shifts", "kind": "grid", "label": "Shifts", "rows": ["Nights", "Weekends", "On call", "Holidays"], "cols": ["OK", "Rather not", "Never"] },
+   { "key": "payFloor", "kind": "text", "label": "Lowest pay you'd take (an hourly or yearly figure)" },
+   { "key": "payTarget", "kind": "text", "label": "Pay that would feel comfortable" },
+   { "key": "benefits", "kind": "text", "label": "Must-have benefits, if any" },
+   { "key": "soon", "kind": "pick", "label": "How soon do you need income?", "options": ["As soon as possible", "Within a few months", "I can be choosy"] }
+  ]},
+  { "key": "reach", "title": "How far to reach", "lede": "Stretch jobs: ones you want but don't fully qualify for on paper.", "questions": [
+   { "key": "years", "kind": "pick", "label": "When a job asks for more experience than you have", "options": ["Only if I meet it", "Up to a year short", "Up to two years short", "Further, if I want it"] },
+   { "key": "degree", "kind": "pick", "label": "When it asks for a degree or certificate you don't have", "options": ["Only if I have it", "If it says \"or equivalent\"", "Apply anyway"] },
+   { "key": "certs", "kind": "text", "label": "Certificates, licences or exams you have or are working on" },
+   { "key": "levels", "kind": "multi", "label": "Levels to show", "options": ["Internship or trainee", "Entry level", "Mid level", "Senior"] },
+   { "key": "tradeoff", "kind": "pick", "label": "Which would you rather apply to first?", "options": ["An ideal job I'm under-qualified for", "An OK job I'd likely get", "A mix of both"] }
+  ]},
+  { "key": "never", "title": "Hard no's", "lede": "Jobs with any of these never reach your tracker.", "questions": [
+   { "key": "noWork", "kind": "multi", "label": "Never", "options": ["Sales quotas", "Cold calling", "Commission only", "Call centres", "Driving as the main job", "Heavy lifting", "Travel over a quarter of the time", "Unpaid", "Staffing agencies", "Needs a security clearance"] },
+   { "key": "noIndustries", "kind": "text", "label": "Industries you won't work in" },
+   { "key": "noEmployers", "kind": "text", "label": "Employers you won't work for" },
+   { "key": "noWords", "kind": "text", "label": "Words in a job title that mean no (for example: Senior, Manager)" }
+  ]},
+  { "key": "sort", "title": "Sort some jobs (optional)", "lede": "One tap each. This catches what's hard to put into words. Skip it if you like.", "questions": [
+   { "key": "cards", "kind": "sort", "label": "How would you feel about each?", "cols": ["Ideal", "Good", "Fallback", "Want, but a stretch", "No"],
+     "rows": ["Barista at an independent café", "IT help desk at a city agency", "Bike mechanic at a neighbourhood shop", "Bookseller", "Front desk at a climbing gym", "Junior data analyst at a transit agency", "Museum visitor services", "Warehouse associate at a big retailer", "Line cook", "Park ranger aide (seasonal)", "Call centre customer support", "Office assistant at a law firm", "Lab technician", "Retail sales with targets", "Event staff at a music venue", "Delivery driver", "Junior GIS technician", "Hotel night auditor", "Teaching assistant", "Sales development representative"] }
+  ]}
+ ]
+}

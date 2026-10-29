@@ -1,0 +1,78 @@
+{
+ "_about": "Your character's parts (D43). The page (character.js) builds its controls from this; the server (app/person.py) accepts only these keys and values; the street draws them (heroSprite in mockups/h-hd2d/street-src/p2d_look.js). 'when' shows a row only while another part has one of the listed values; 'unless' hides it then.",
+ "palettes": {
+  "skin": ["#f4d4b4", "#f0caa8", "#e8b896", "#c98e6a", "#a8704a", "#8d5a3c", "#5e3a26"],
+  "cloth": ["#3a4a6a", "#2a3a5a", "#3a5a7a", "#6a2e2a", "#7a2a32", "#a83a4a", "#2f4a3a", "#4a5a3a", "#3a5a4a", "#5a4a3a", "#6a4a2a", "#8a5a2a", "#3a3a40", "#1e1a18", "#d8d0c4", "#ece6da", "#d8a830", "#e87a1a", "#e8d040", "#6a4a9a", "#d84a8a", "#2a8a8a"],
+  "hair": ["#1a1a1a", "#2a1d14", "#5a3a1e", "#8a6a4a", "#8a3a1e", "#c86a2a", "#c9a35a", "#e8e0c8", "#8a8a8a", "#c8c4b8", "#d84a8a", "#2a8a8a", "#6a4a9a", "#3a6ad8"],
+  "accent": ["#c8282a", "#a83a4a", "#c86a3a", "#e87a1a", "#d8a830", "#c8a050", "#e8c030", "#3a5a7a", "#3a8ad8", "#2a4a3a", "#3a9a3a", "#d8c8a0", "#ece6da", "#4a4a48", "#1e1a18", "#d84a8a", "#6a4a9a"],
+  "legs": ["#2a2a34", "#1e2430", "#3a3024", "#4a4038", "#2a2228", "#3a4a6a", "#5a4a3a", "#a83a4a", "#6a2e2a", "#d8d0c4", "#ece6da", "#e87a1a", "#3a9a3a"],
+  "shoe": ["#1a1410", "#3a2414", "#6a4a2a", "#e8c070", "#c8282a", "#e87a1a", "#ece6da", "#3a5a7a", "#e8c030"]
+ },
+ "groups": [
+  { "label": "Body", "rows": [
+   { "key": "skin", "label": "Skin", "colours": "skin" },
+   { "key": "freckles", "label": "Freckles", "flag": true },
+   { "key": "blush", "label": "Rosy cheeks", "flag": true }
+  ]},
+  { "label": "Hair and face", "rows": [
+   { "key": "hairStyle", "label": "Hair", "choices": [["short", "Short"], ["sidepart", "Side parting"], ["spiky", "Spiky"], ["curly", "Curly"], ["afro", "Afro"], ["long", "Long"], ["bun", "Bun"], ["ponytail", "Ponytail"], ["pigtails", "Pigtails"], ["braids", "Braid"], ["mohawk", "Mohawk"], ["bald", "None"]] },
+   { "key": "hair", "label": "Hair colour", "colours": "hair", "unless": ["hairStyle", ["bald"]] },
+   { "key": "facial", "label": "Facial hair", "choices": [["", "None"], ["moustache", "Moustache"], ["curled", "Curled moustache"], ["goatee", "Goatee"], ["beard", "Beard"]] },
+   { "key": "facialCol", "label": "Its colour", "colours": "hair", "when": ["facial", ["moustache", "curled", "goatee", "beard"]] },
+   { "key": "glasses", "label": "Glasses", "choices": [["", "None"], ["round", "Round"], ["square", "Square"], ["sun", "Sunglasses"], ["monocle", "Monocle"]] },
+   { "key": "earrings", "label": "Earring", "flag": true },
+   { "key": "pipe", "label": "Pipe", "flag": true }
+  ]},
+  { "label": "On the head", "rows": [
+   { "key": "hat", "label": "Hat", "choices": [["", "None"], ["cap", "Cap"], ["flatcap", "Flat cap"], ["bowler", "Bowler"], ["tophat", "Top hat"], ["beanie", "Beanie"], ["bobble", "Bobble hat"], ["beret", "Beret"], ["sailor", "Sailor's cap"], ["fisherman", "Fisherman's cap"], ["scarf", "Headscarf"], ["baker", "Baker's hat"], ["lace", "Volendam lace cap"], ["crown", "King's Day crown"], ["tulips", "Tulip crown"], ["propeller", "Propeller cap"]] },
+   { "key": "hatCol", "label": "Hat colour", "colours": "accent", "when": ["hat", ["cap", "flatcap", "bowler", "tophat", "beanie", "bobble", "beret", "sailor", "fisherman", "scarf", "crown", "propeller"]] }
+  ]},
+  { "label": "Top", "rows": [
+   { "key": "top", "label": "Top", "choices": [["coat", "Coat"], ["long", "Long coat"], ["jacket", "Jacket"], ["sweater", "Sweater"], ["raincoat", "Raincoat"], ["overalls", "Overalls"], ["dress", "Dress"]] },
+   { "key": "coat", "label": "Colour", "colours": "cloth" },
+   { "key": "trim", "label": "Shirt", "colours": "cloth", "when": ["top", ["jacket", "overalls"]] },
+   { "key": "pattern", "label": "Pattern", "choices": [["", "Plain"], ["stripes", "Stripes"], ["checks", "Checks"], ["dots", "Dots"]] },
+   { "key": "patCol", "label": "Pattern colour", "colours": "accent", "when": ["pattern", ["stripes", "checks", "dots"]] },
+   { "key": "apron", "label": "Apron", "flag": true }
+  ]},
+  { "label": "Round the neck", "rows": [
+   { "key": "neck", "label": "Neck", "choices": [["", "Nothing"], ["scarf", "Scarf"], ["striped", "Striped scarf"], ["amsterdam", "Amsterdam scarf"], ["bowtie", "Bow tie"], ["tie", "Tie"], ["necklace", "Necklace"]] },
+   { "key": "neckCol", "label": "Its colour", "colours": "accent", "when": ["neck", ["scarf", "striped", "bowtie", "tie", "necklace"]] }
+  ]},
+  { "label": "Legs and feet", "rows": [
+   { "key": "bottom", "label": "Legs", "choices": [["trousers", "Trousers"], ["shorts", "Shorts"], ["skirt", "Skirt"]], "unless": ["top", ["overalls", "dress"]] },
+   { "key": "legs", "label": "Colour", "colours": "legs", "unless": ["top", ["overalls", "dress"]] },
+   { "key": "socks", "label": "Socks or tights", "colours": "legs", "none": "Bare legs", "when": ["bottom", ["shorts", "skirt"]], "orWhen": ["top", ["dress"]] },
+   { "key": "shoes", "label": "Shoes", "choices": [["shoes", "Shoes"], ["boots", "Boots"], ["sneakers", "Sneakers"], ["clogs", "Clogs"]] },
+   { "key": "shoeCol", "label": "Shoe colour", "colours": "shoe" }
+  ]},
+  { "label": "In hand", "rows": [
+   { "key": "hold", "label": "Holding", "choices": [["", "Nothing"], ["coffee", "Coffee"], ["bread", "Bread"], ["stroopwafel", "Stroopwafel"], ["cheese", "Gouda"], ["herring", "Herring"], ["tulips", "Tulips"], ["flowers", "Flowers"], ["book", "Book"], ["lantern", "Lantern"], ["umbrella", "Umbrella"], ["balloon", "Balloon"], ["flag", "Amsterdam flag"]] },
+   { "key": "holdCol", "label": "Its colour", "colours": "accent", "when": ["hold", ["tulips", "book", "umbrella", "balloon"]] }
+  ]},
+  { "label": "Shoulder and back", "rows": [
+   { "key": "shoulder", "label": "On the shoulder", "choices": [["", "Nothing"], ["pigeon", "Pigeon"], ["gull", "Gull"], ["parrot", "Parrot"], ["cat", "Cat"]] },
+   { "key": "back", "label": "On the back", "choices": [["", "Nothing"], ["satchel", "Satchel"], ["backpack", "Backpack"], ["guitar", "Guitar case"], ["cape", "Cape"]] },
+   { "key": "backCol", "label": "Its colour", "colours": "cloth", "when": ["back", ["satchel", "backpack", "guitar", "cape"]] }
+  ]}
+ ],
+ "presets": [
+  ["baker", "Baker", { "skin": "#f0caa8", "top": "coat", "coat": "#d8d0c4", "legs": "#3a3024", "apron": true, "hat": "baker", "hairStyle": "short", "hair": "#5a3a1e", "hold": "bread" }],
+  ["mechanic", "Bike mechanic", { "skin": "#c98e6a", "top": "overalls", "coat": "#3a4a6a", "trim": "#ece6da", "hat": "cap", "hatCol": "#4a4a48", "hairStyle": "short", "hair": "#1a1a1a", "shoes": "boots", "shoeCol": "#3a2414" }],
+  ["tram", "Tram driver", { "skin": "#e8b896", "top": "jacket", "coat": "#2a3a5a", "trim": "#ece6da", "neck": "tie", "neckCol": "#3a5a7a", "legs": "#1e2430", "hat": "cap", "hatCol": "#1e1a18", "hairStyle": "short", "hair": "#2a1d14", "glasses": "round" }],
+  ["books", "Bookseller", { "skin": "#e8b896", "top": "long", "coat": "#6a4a2a", "legs": "#3a3024", "hairStyle": "curly", "hair": "#5a3a1e", "glasses": "round", "neck": "scarf", "neckCol": "#d8c8a0", "back": "satchel", "backCol": "#8a5a2a", "hold": "book", "holdCol": "#3a5a7a" }],
+  ["florist", "Florist", { "skin": "#8d5a3c", "top": "sweater", "coat": "#3a5a4a", "bottom": "skirt", "legs": "#5a4a3a", "socks": "#2a2228", "hairStyle": "long", "hair": "#1a1a1a", "hold": "tulips", "blush": true }],
+  ["skipper", "Boat skipper", { "skin": "#c98e6a", "top": "sweater", "coat": "#2a3a5a", "pattern": "stripes", "patCol": "#ece6da", "legs": "#2a2a34", "hat": "fisherman", "hatCol": "#1e1a18", "hairStyle": "short", "hair": "#8a6a4a", "facial": "beard", "facialCol": "#8a6a4a", "pipe": true, "shoulder": "gull", "shoes": "boots" }],
+  ["lamplighter", "Lamplighter", { "skin": "#f0caa8", "top": "long", "coat": "#3a3a40", "legs": "#2a2228", "hat": "bowler", "hatCol": "#1e1a18", "hairStyle": "short", "hair": "#2a1d14", "facial": "moustache", "facialCol": "#2a1d14", "neck": "scarf", "neckCol": "#a83a4a", "hold": "lantern" }],
+  ["student", "Student", { "skin": "#e8b896", "top": "coat", "coat": "#7a2a32", "legs": "#2a2228", "hairStyle": "bun", "hair": "#c9a35a", "glasses": "round", "back": "backpack", "backCol": "#8a5a2a", "shoes": "sneakers", "shoeCol": "#ece6da", "hold": "coffee" }],
+  ["kingsday", "King's Day", { "skin": "#e8b896", "top": "sweater", "coat": "#e87a1a", "bottom": "shorts", "legs": "#1e2430", "socks": "#e87a1a", "hat": "crown", "hatCol": "#d8a830", "hairStyle": "spiky", "hair": "#c9a35a", "hold": "flag", "shoes": "sneakers", "shoeCol": "#e87a1a", "blush": true }],
+  ["volendam", "Volendam", { "skin": "#f0caa8", "top": "dress", "coat": "#1e1a18", "apron": true, "hat": "lace", "neck": "necklace", "neckCol": "#c8282a", "hairStyle": "long", "hair": "#5a3a1e", "shoes": "clogs", "shoeCol": "#e8c070", "hold": "cheese" }],
+  ["herring", "Herring stand", { "skin": "#c98e6a", "top": "coat", "coat": "#ece6da", "pattern": "stripes", "patCol": "#3a5a7a", "apron": true, "hat": "sailor", "hatCol": "#2a3a5a"
+  , "hairStyle": "short", "hair": "#2a1d14", "facial": "curled", "facialCol": "#2a1d14", "hold": "herring", "shoes": "clogs", "shoeCol": "#e8c070" }],
+  ["busker", "Canal busker", { "skin": "#f4d4b4", "top": "long", "coat": "#6a4a9a", "hat": "tophat", "hatCol": "#1e1a18", "glasses": "monocle", "facial": "curled", "facialCol": "#c8c4b8", "hairStyle": "long", "hair": "#c8c4b8", "neck": "bowtie", "neckCol": "#c8282a", "back": "guitar", "backCol": "#6a4a2a", "shoulder": "parrot" }],
+  ["courier", "Bike courier", { "skin": "#5e3a26", "top": "raincoat", "coat": "#e8d040", "legs": "#1e2430", "hat": "beanie", "hatCol": "#4a4a48", "hairStyle": "braids", "hair": "#1a1a1a", "glasses": "sun", "back": "backpack", "backCol": "#3a3a40", "shoes": "sneakers", "shoeCol": "#ece6da" }],
+  ["flowers", "Flower market", { "skin": "#e8b896", "top": "jacket", "coat": "#2f4a3a", "trim": "#ece6da", "hat": "tulips", "hairStyle": "pigtails", "hair": "#c86a2a", "freckles": true, "bottom": "skirt", "legs": "#a83a4a", "socks": "#ece6da", "shoes": "clogs", "shoeCol": "#c8282a", "hold": "flowers" }],
+  ["pigeons", "Pigeon keeper", { "skin": "#a8704a", "top": "long", "coat": "#4a5a3a", "hat": "flatcap", "hatCol": "#c8a050", "hairStyle": "short", "hair": "#c8c4b8", "facial": "beard", "facialCol": "#c8c4b8", "neck": "amsterdam", "shoulder": "pigeon", "hold": "stroopwafel" }],
+  ["dreamer", "Daydreamer", { "skin": "#f0caa8", "top": "coat", "coat": "#3a5a7a", "back": "cape", "backCol": "#a83a4a", "hat": "propeller", "hatCol": "#e8c030", "hairStyle": "afro", "hair": "#d84a8a", "glasses": "round", "earrings": true, "hold": "balloon", "holdCol": "#d84a8a", "shoulder": "cat" }]
+ ]
+}

@@ -1,0 +1,336 @@
+{
+ "_about": "A new person's resume library before their resume is imported (app/firstrun.py). Generic only: the letter blocks that name no one, the keyword table the builders score with, no jobs. Made from the first user's library on 2026-10-28 with the personal blocks (whys, evidence, sender, the degree fact) left out.",
+ "header": {
+  "name": "",
+  "contact": "",
+  "location": ""
+ },
+ "languages": "",
+ "education": {},
+ "entries": [],
+ "skills": [],
+ "related": {
+  "network": [
+   "network",
+   "cisco",
+   "switch",
+   "vlan",
+   "lan",
+   "wan",
+   "router",
+   "routing",
+   "tcp/ip",
+   "ccna",
+   "fiber",
+   "ethernet"
+  ],
+  "identity": [
+   "active directory",
+   "entra",
+   "azure",
+   "account",
+   "access management",
+   "mfa",
+   "exchange",
+   "office 365",
+   "microsoft 365",
+   "m365",
+   "identity",
+   "permissions"
+  ],
+  "support": [
+   "help desk",
+   "helpdesk",
+   "service desk",
+   "desktop support",
+   "ticket",
+   "end user",
+   "technical support",
+   "troubleshoot",
+   "it support",
+   "support specialist",
+   "technician",
+   "user support",
+   "vpn",
+   "macos",
+   "ios",
+   "windows",
+   "onboarding",
+   "offboarding",
+   "laptop",
+   "desktop",
+   "printer",
+   "office 365"
+  ],
+  "servers": [
+   "vmware",
+   "server",
+   "virtual",
+   "data center",
+   "linux",
+   "windows server",
+   "infrastructure",
+   "systems administrator",
+   "sysadmin"
+  ],
+  "rfid": [
+   "rfid",
+   "fare",
+   "gate",
+   "turnstile",
+   "access control",
+   "card reader",
+   "ticketing",
+   "omny",
+   "farebox",
+   "validator",
+   "toll"
+  ],
+  "pos": [
+   "pos",
+   "point of sale",
+   "point-of-sale",
+   "terminal",
+   "register",
+   "payment",
+   "kiosk",
+   "cashier"
+  ],
+  "devices": [
+   "intune",
+   "mdm",
+   "ipad",
+   "mobile device",
+   "apple",
+   "device management",
+   "imaging",
+   "endpoint"
+  ],
+  "phones": [
+   "avaya",
+   "phone",
+   "telecom",
+   "voip",
+   "telephone",
+   "wiring",
+   "cabling",
+   "low voltage"
+  ],
+  "training": [
+   "train",
+   "mentor",
+   "onboard",
+   "lead",
+   "supervis",
+   "coach",
+   "instruct"
+  ],
+  "service": [
+   "guest",
+   "customer",
+   "front desk",
+   "host",
+   "server",
+   "barista",
+   "hospitality",
+   "member",
+   "concierge",
+   "sales",
+   "retail",
+   "visitor",
+   "associate",
+   "attendant"
+  ],
+  "food": [
+   "restaurant",
+   "food",
+   "kitchen",
+   "dining",
+   "busser",
+   "runner",
+   "dish",
+   "prep",
+   "cafe",
+   "bakery",
+   "barista",
+   "coffee"
+  ],
+  "outdoors": [
+   "outdoor",
+   "climbing",
+   "ski",
+   "park",
+   "trail",
+   "camp",
+   "recreation",
+   "gym",
+   "fitness",
+   "guide",
+   "garden",
+   "nature",
+   "bike"
+  ],
+  "gis": [
+   "gis",
+   "arcgis",
+   "map",
+   "mapping",
+   "spatial",
+   "geospatial",
+   "esri",
+   "gtfs",
+   "planning",
+   "planner",
+   "cad"
+  ],
+  "data": [
+   "data",
+   "analyst",
+   "analysis",
+   "python",
+   "sql",
+   "database",
+   "excel",
+   "reporting",
+   "dashboard",
+   "metrics",
+   "scripting",
+   "automation",
+   "research"
+  ],
+  "software": [
+   "software",
+   "developer",
+   "javascript",
+   "react",
+   "web",
+   "engineer",
+   "programming",
+   "application"
+  ],
+  "transit": [
+   "transit",
+   "bus",
+   "rail",
+   "mta",
+   "subway",
+   "transportation",
+   "dot",
+   "traffic",
+   "signal",
+   "its"
+  ],
+  "ops": [
+   "deployment",
+   "inventory",
+   "rollout",
+   "install",
+   "field",
+   "maintenance",
+   "operations",
+   "logistics"
+  ],
+  "access": [
+   "accessibility",
+   "ada",
+   "assistive",
+   "screen reader",
+   "disability"
+  ]
+ },
+ "pathTopics": {},
+ "presets": {},
+ "letters": {
+  "note": "Business letter. Paragraph 1: opening (+ posting reference), a thesis naming the needs the evidence proves, a why, and an optional sentence about the place. Paragraph 2: up to three evidence sentences, grouped by job; the first sentence about a job names it ('first' form), the rest continue ('text' form). Paragraph 3: a close. Picked by fixed rules (no AI).",
+  "greeting": "Dear Hiring Manager,",
+  "signoff": "Sincerely,",
+  "closing": "Sincerely,",
+  "openings": [
+   {
+    "id": "career",
+    "text": "I am writing to apply for the {title} position at {employer}{ref}.",
+    "alts": [],
+    "topics": [],
+    "kw": [],
+    "kind": "career",
+    "star": false,
+    "block": false
+   },
+   {
+    "id": "plain",
+    "text": "I'm applying for the {title} position at {employer}{ref}.",
+    "alts": [],
+    "topics": [],
+    "kw": [],
+    "kind": "any",
+    "star": false,
+    "block": false
+   },
+   {
+    "id": "service",
+    "text": "I'd love to join {employer} as a {title}.",
+    "alts": [],
+    "topics": [],
+    "kw": [],
+    "kind": "service",
+    "star": false,
+    "block": false
+   }
+  ],
+  "theses": [
+   {
+    "id": "career",
+    "kind": "career",
+    "text": "My work so far has covered much of what this role asks for: {needs}."
+   },
+   {
+    "id": "service",
+    "kind": "service",
+    "text": "I'd bring {needs}."
+   }
+  ],
+  "closes": [
+   {
+    "id": "career",
+    "text": "Thank you for considering my application. I'd welcome the chance to talk about how I can help {employer}.",
+    "alts": [],
+    "topics": [],
+    "kw": [],
+    "kind": "career",
+    "star": false,
+    "block": false
+   },
+   {
+    "id": "service",
+    "text": "I'm flexible on hours, including evenings and weekends. Thank you for considering me; I'd love to come in and meet the team.",
+    "alts": [],
+    "topics": [],
+    "kw": [],
+    "kind": "service",
+    "star": false,
+    "block": false
+   },
+   {
+    "id": "spanish",
+    "text": "Thank you for your time; I'd be glad to talk about how I can help {employer}.",
+    "alts": [],
+    "topics": [],
+    "kw": [],
+    "kind": "any",
+    "star": false,
+    "block": false
+   }
+  ],
+  "whys": [],
+  "evidence": [],
+  "sender": [],
+  "facts": {
+   "note": "Key facts, put at the start of the closing paragraph. {schedule} and {start} come from the letter page's fields (schedule read from the job's notes, e.g. Mon-Fri 8-5).",
+   "degree": "My {degree} from {school} meets the position's minimum qualifications.",
+   "both": "I'm available to work {schedule} and can start {start}.",
+   "schedule": "I'm available to work {schedule}.",
+   "start": "I can start {start}.",
+   "defaultStart": "right away"
+  }
+ }
+}

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Applications</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script>
+</head><body>
+<svg class="sky" id="sky" aria-hidden="true"></svg>
+<div class="layout">
+
+<aside class="rail" id="side">
+  <nav id="nav" aria-label="Sections">
+    <p class="site">Applications</p>
+    <ul class="menu">
+      <li><a href="#today">Today <span class="n" id="n-today"></span></a></li>
+      <li><a href="#inbox">Inbox <span class="n" id="n-inbox"></span></a></li>
+      <li><a href="#jobs">Jobs <span class="n" id="n-jobs"></span></a></li>
+      <li><a href="#resume">Resume</a></li>
+      <li><ul class="toc" id="rb-toc" hidden aria-label="Jump to a job"></ul></li>
+      <li><a href="#letter">Cover letter</a></li>
+      <li class="gap"></li>
+      <li><a href="#kit">Paste kit</a></li>
+      <li><a href="#character">Your character</a></li>
+      <li><a href="#interview">What I'm looking for</a></li>
+      <li id="paths-link" hidden><a href="#home" data-group="paths">Career paths</a></li>
+    </ul>
+    <p class="sound-ctl"><button id="snd" aria-pressed="false">Sound off</button><button id="amb" aria-pressed="false" hidden>Street ambience off</button><button id="railsize" type="button">Sidebar: full</button></p>
+  </nav>
+  <svg class="scene" id="scene" role="img" aria-label="A canal at night. Each lit window is an application you sent."></svg>
+</aside>
+
+<main>
+<p class="err" id="err" hidden></p>
+
+<!-- ============ TODAY ============ -->
+<section id="today" hidden>
+  <p class="date" id="t-date"></p>
+  <h1 id="t-status"></h1>
+  <p class="cue"><span id="t-cue"></span> <button class="quiet" data-act="edit-cue">Change</button></p>
+  <div class="now" id="t-now" aria-live="polite"></div>
+  <div id="t-next-wrap">
+    <h2 style="font-size:22px;margin:72px 0 8px">Next</h2>
+    <div class="boardwrap"><table class="board" id="t-next"></table></div>
+    <p class="more" id="t-more"></p>
+  </div>
+  <p class="after small" id="t-other">Also counts: <button data-act="vote-agency">a recruiter or agency contact</button>, <button data-act="vote-followup">a follow-up or networking message</button>. Filed for a civil-service exam? <button data-act="exam">Note it</button>. <button data-act="undo">Undo the last one</button>.</p>
+</section>
+
+<!-- ============ INBOX ============ -->
+<section id="inbox" hidden>
+  <h1>Inbox</h1>
+  <p class="lede">New jobs from the daily scan. Queue the ones you'd send. Skipping is fine.</p>
+  <div id="i-list"></div>
+  <h2>Find jobs with Claude</h2>
+  <div id="finder"></div>
+  <h2>Add a job yourself</h2>
+  <form class="form" id="add-form">
+    <label>Job title<input name="title" required></label>
+    <label>Employer<input name="employer" required></label>
+    <label>Link to the posting<input name="url" type="url" required></label>
+    <label>Closes (if it says)<input name="closes" type="date"></label>
+    <label>Resume<select name="resume" id="add-resume"></select></label>
+    <label>Why you qualify, in a sentence<textarea name="why" rows="2"></textarea></label>
+    <button class="btn primary" type="submit">Add to queue</button>
+  </form>
+</section>
+
+<!-- ============ JOBS: queue, later, sent in one list ============ -->
+<section id="jobs" hidden>
+  <h1>Jobs</h1>
+  <p class="lede" id="j-count"></p>
+  <div class="tabs" role="tablist" id="j-tabs"></div>
+  <div class="tools">
+    <span>Order by <select class="sortpick" aria-label="Order by"></select></span>
+    <span><input id="j-q" placeholder="Search" aria-label="Search jobs" autocomplete="off"></span>
+  </div>
+  <div class="chips" id="j-chips" aria-label="Quick filters"></div>
+  <div class="bulkbar" id="j-bulk" hidden></div>
+  <ol class="joblist" id="j-list"></ol>
+  <p class="small keys" id="j-keys">Right-click a job for everything you can do with it. Keys: &uarr; &darr; move, Enter opens the posting, Q queue, L later, S skip, D do it now, Space select, / search. Ctrl- or Shift-click to select several.</p>
+  <div id="j-sent-extra" hidden>
+    <h2>Every one that counted</h2>
+    <div class="boardwrap"><table class="board" id="o-votes"></table></div>
+  </div>
+  <p class="small" id="j-note">Fit is how you match the posting as written. Pay sorts by the bottom of the range; hourly pay counts as 2,080 hours a year. Most applications get silence or a no: that's the normal rate, not a verdict.</p>
+</section>
+
+<!-- ============ RESUME BUILDER ============ -->
+<section id="resume" hidden>
+  <h1>Resume</h1>
+  <p class="lede" id="rb-for"></p>
+  <div class="tools">
+    <span><select id="rb-preset" aria-label="Start from a saved version"></select></span>
+    <button class="quiet" id="rb-suggest" type="button">Suggest picks again</button>
+    <span>Location <input id="rb-loc" aria-label="Location line"></span>
+    <label><input type="checkbox" id="rb-pfirst"> Projects before experience</label>
+  </div>
+  <details class="rb-posting"><summary>Paste the posting's text (optional: better picks)</summary>
+    <textarea id="rb-posting" rows="6" aria-label="The posting's text"></textarea></details>
+  <p class="small">Picks are scored by fixed rules, not AI: each bullet's words found in the job's title count 3, elsewhere in its text or the pasted posting 1, and 2 more if it's on the job's path. Click a bullet to edit it. J and K jump between jobs.</p>
+  <p class="small rb-gaps" id="rb-gaps" aria-live="polite"></p>
+  <ul class="rb-row" id="rb-row" aria-label="Jump to"></ul>
+  <div id="rb-list"></div>
+  <div class="actions rb-end"><button class="btn primary" id="rb-preview" type="button">Preview</button> <button class="btn" id="rb-make" type="button">Make the PDF</button></div>
+  <p class="small" id="rb-made" aria-live="polite"></p>
+  <div class="rb-bar" id="rb-bar">
+    <div class="rb-sugg" id="rb-sugg" hidden></div>
+    <div class="rb-barline"><div class="rb-track"><div class="rb-fill"></div></div><span class="rb-say" aria-live="polite"></span>
+      <button class="quiet" id="rb-fixbtn" type="button" hidden>Ways to fit</button> <button class="quiet" id="rb-preview2" type="button">Preview</button></div>
+  </div>
+  <div class="rb-modal" id="rb-modal" hidden>
+    <div class="rb-sheet" role="dialog" aria-label="Resume preview">
+      <div class="rb-sheetbar"><button class="btn primary" type="button" onclick="document.getElementById('rb-make').click()">Make the PDF</button> <button class="btn" id="rb-close" type="button">Back to the checklist</button> <span class="small">Esc closes</span></div>
+      <div class="rb-paperbox" id="rb-paperbox"><div class="rpaper" id="rb-paper"></div></div>
+    </div>
+  </div>
+  <div class="rpaper rb-measure" id="rb-measure" aria-hidden="true"></div>
+</section>
+
+<!-- ============ COVER LETTER BUILDER ============ -->
+<section id="letter" hidden>
+  <h1>Cover letter</h1>
+  <p class="lede" id="cl-for"></p>
+  <div class="tools">
+    <button class="quiet" id="cl-suggest" type="button">Suggest picks again</button>
+    <span>Job <input id="cl-job" aria-label="Job title as written in the letter"></span>
+    <span>Employer <input id="cl-emp" aria-label="Employer as written in the letter"></span>
+    <span>Posting no. <input id="cl-ref" aria-label="Posting or reference number" style="width:7em"></span>
+  </div>
+  <div class="tools">
+    <span>To <input id="cl-addr" aria-label="Employer address line" style="width:18em"></span>
+    <span>Greeting <input id="cl-greeting" aria-label="Greeting"></span>
+    <span>Your city <input id="cl-loc" aria-label="Your city in the letter" style="width:10em"></span>
+  </div>
+  <p class="sig-line" id="cl-sig"></p>
+  <details class="rb-posting"><summary>Paste the posting's text (optional: better picks)</summary>
+    <textarea id="cl-posting" rows="6" aria-label="The posting's text"></textarea></details>
+  <div id="cl-list"></div>
+  <div class="actions rb-end"><button class="btn primary" id="cl-preview" type="button">Preview</button> <button class="btn" id="cl-make" type="button">Make the PDF</button></div>
+  <p class="small" id="cl-made" aria-live="polite"></p>
+  <div class="rb-bar" id="cl-bar">
+    <div class="rb-barline"><div class="rb-track"><div class="rb-fill"></div></div><span class="rb-say" aria-live="polite"></span>
+      <button class="quiet" id="cl-preview2" type="button">Preview</button></div>
+  </div>
+  <div class="rb-modal" id="cl-modal" hidden>
+    <div class="rb-sheet" role="dialog" aria-label="Cover letter preview">
+      <div class="rb-sheetbar"><button class="btn primary" type="button" onclick="document.getElementById('cl-make').click()">Make the PDF</button> <button class="btn" id="cl-close" type="button">Back to the blocks</button> <span class="small">Esc closes</span></div>
+      <div class="rb-paperbox" id="cl-paperbox"><div class="rpaper" id="cl-paper"></div></div>
+    </div>
+  </div>
+  <div class="rb-modal" id="sig-modal" hidden>
+    <div class="sig-sheet" role="dialog" aria-label="Draw your signature">
+      <p>Sign in the box with the mouse, a pen or a finger.</p>
+      <canvas id="sig-pad" class="sig-pad" aria-label="Signature pad"></canvas>
+      <div class="rb-sheetbar"><button class="btn primary" id="sig-save" type="button" data-sig="save">Save</button> <button class="btn" type="button" data-sig="reset">Start over</button> <button class="btn" type="button" data-sig="cancel">Cancel</button> <span class="small" id="sig-msg" aria-live="polite"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PASTE KIT ============ -->
+<section id="kit" hidden>
+  <h1>Paste kit</h1>
+  <p class="lede">The boxes application forms ask for again and again. Copy, paste, move on.</p>
+  <div id="k-list"></div>
+</section>
+
+<!-- ============ FIRST RUN (setup.js fills it; opens when data/profile.json is missing) ============ -->
+<section id="setup" hidden></section>
+
+<!-- ============ THE JOB INTERVIEW (interview.js fills it) ============ -->
+<section id="interview" hidden></section>
+
+<!-- ============ YOUR CHARACTER (character.js fills it) ============ -->
+<section id="character" hidden></section>
+
+<!-- The Career paths pages come from data/paths.html (the person's own; app.js adds them here). -->
+
+</main>
+</div>
+<script src="/scene3d.js"></script>
+<script src="/sound.js"></script>
+<script src="/resume.js"></script>
+<script src="/letter.js"></script>
+<script src="/character.js"></script>
+<script src="/setup.js"></script>
+<script src="/interview.js"></script>
+<script src="/finder.js"></script>
+<script src="/app.js"></script>
+</body></html>

@@ -1,0 +1,6 @@
+# Everything personal lives here; never commit it.
+data/
+resumes/
+__pycache__/
+*.pyc
+*.tmp

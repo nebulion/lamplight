@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- one canal house in daylight: red brick, white frames and step caps, dark glass, a green door -->
+  <path d="M6 32V13h2v-3h2V7h2V4h8v3h2v3h2v3h2v19z" fill="#9b4532"/>
+  <path d="M6 13h2v1H6zM8 10h2v1H8zM10 7h2v1h-2zM12 4h8v1h-8zM20 7h2v1h-2zM22 10h2v1h-2zM24 13h2v1h-2z" fill="#e6dfd0"/>
+  <rect x="15" y="2" width="2" height="3" fill="#4a3220"/>
+  <rect x="6" y="26" width="20" height="1" fill="#e6dfd0"/>
+  <g fill="#e6dfd0">
+    <rect x="13" y="7" width="6" height="5"/>
+    <rect x="8" y="14" width="6" height="6"/><rect x="18" y="14" width="6" height="6"/>
+    <rect x="8" y="21" width="6" height="4"/><rect x="18" y="21" width="6" height="4"/>
+  </g>
+  <g fill="#2e3b4a">
+    <rect x="14" y="8" width="4" height="3"/>
+    <rect x="9" y="15" width="4" height="4"/><rect x="19" y="15" width="4" height="4"/>
+    <rect x="9" y="22" width="4" height="2"/><rect x="19" y="22" width="4" height="2"/>
+  </g>
+  <g fill="#7f97ad">
+    <rect x="9" y="15" width="2" height="1"/><rect x="19" y="15" width="2" height="1"/><rect x="14" y="8" width="2" height="1"/>
+  </g>
+  <rect x="9" y="27" width="5" height="5" fill="#2d4b3a"/>
+  <rect x="18" y="28" width="5" height="3" fill="#2e3b4a"/>
+</svg>
