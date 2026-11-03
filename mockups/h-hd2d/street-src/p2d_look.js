@@ -208,7 +208,7 @@ function pedalSheet(src, fw, fh, hip, bb) {
   const pg = pc.getContext("2d", { willReadFrequently: true }); pg.drawImage(src, 0, 0, fw, fh, 0, 0, fw, fh);
   const hex = (d, i) => "#" + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join("");
   const colAt = (y, fb) => { const d = pg.getImageData(0, y, fw, 1).data, xs = []; for (let x = 0; x < fw; x++) if (d[x * 4 + 3] > 128) xs.push(x); return xs.length ? hex(d, xs[Math.floor(xs.length / 2)] * 4) : fb; };
-  const shin = shade(colAt(fh - 7, "#2a2a34"), 0.2), thigh = shin, shoe = shade(colAt(fh - 1, "#1a1410"), 0.25);   // read off the legs, a little lighter so they show at night
+  const shin = shade(colAt(fh - 7, "#2a2a34"), 0.5), thigh = shin, shoe = shade(colAt(fh - 1, "#1a1410"), 0.4);   // read off the legs, lighter so they show at night
   const [c, g] = canvas(fw * 4, fh), R2 = 3;
   const L = 0.56 * (bb[1] + R2 - hip[1]);
   for (let f = 0; f < 4; f++) {
