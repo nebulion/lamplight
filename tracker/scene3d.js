@@ -68,7 +68,7 @@
      from), in cold moonlight, with exactly the windows his applications have lit. Every 10 s it fades to the next house
      along. When he logs an application it switches to that house and the window comes on. The 3D street only runs while
      it's open, which also saves the GPU. */
-  var tile = null, cap = null, art = null, tileX = 0, newK = -1, newT0 = 0;
+  var tile = null, cap = null, art = null, tileX = 0, newK = -1, newT0 = 0, litSaid = -1;
   var CAROUSEL_MS = 10000, FADE_MS = 1300, carTimer = 0, fading = false;
   /* (later the same day) he found the small corner tile left a lot of dead space: the building now stands big and centred in
      the space under the menu (whole-number scaling, so the pixels stay crisp), its roof and chimney drawn above it, and
@@ -123,10 +123,14 @@
       g.fillStyle = "#8f877a"; g.fillRect(cx - 1, ct - 2, 12, 2); g.fillStyle = "#8a4a30"; g.fillRect(cx + 2, ct - 6, 2, 4); g.fillRect(cx + 6, ct - 6, 2, 4);
     }
     g.drawImage(art.day, ox, oy);                             // the house itself, evenly lit: no moonlight, shadows or effects (they come in as it opens)
+    drawSteps(g, ox, oy);                                     // and the steps at its door, as in the street
     var hero = heroPlan(now);                                 // your character comes to light it (D43), if it's this house's window
     art.windows.forEach(function (w) {                        // his lit windows
       var a = w.k < lit ? 1 : 0;
-      if (w.k === newK) { a = Math.min(1, Math.max(0, (now - newT0) / 1000 - (hero ? HT.light : 0)) / 1.6); if (a < 1) more = true; }
+      if (w.k === newK) {
+        a = Math.min(1, Math.max(0, (now - newT0) / 1000 - (hero ? HT.light : 0)) / 1.6); if (a < 1) more = true;
+        if (a > 0 && litSaid !== newK) { litSaid = newK; document.dispatchEvent(new CustomEvent("street", { detail: "lit" })); }   // the chime (sound.js)
+      }
       if (a > 0) { g.globalAlpha = a; g.drawImage(art.lit, w.x, w.y, w.w, w.h, ox + w.x, oy + w.y, w.w, w.h); }
     });
     g.globalAlpha = 1;
@@ -146,9 +150,40 @@
     var t = (now - newT0) / 1000;
     return t < HT.end ? { t: t, ch: ch, d: d, going: true } : null;
   }
+  /* The steps (2026-11-02, he asked): a plain door has one step; a mansion's raised entrance has a landing with five treads up
+     from each side. The picture draws them, and your character's feet follow them. Picture pixels, 16 per metre. */
+  function drawSteps(g, ox, oy) {
+    var d = art.door; if (!d) return;
+    var cx = ox + d.x + d.w / 2, ground = oy + art.H, stone = "#b4ab98", edge = "#d0c8b6", dark = "#8c8474";
+    if (art.stoep) {
+      var top = art.H - d.y - d.h, half = (d.w + 20) / 2, tread = 6.72;
+      for (var sd = -1; sd <= 1; sd += 2) for (var k = 0; k < 5; k++) {
+        var hh = Math.round(top * (5 - k) / 6), x0 = sd < 0 ? cx - half - (k + 1) * tread : cx + half + k * tread;
+        g.fillStyle = stone; g.fillRect(Math.round(x0), ground - hh, Math.ceil(tread), hh);
+        g.fillStyle = edge; g.fillRect(Math.round(x0), ground - hh, Math.ceil(tread), 1);
+      }
+      g.fillStyle = stone; g.fillRect(Math.round(cx - half), ground - top, half * 2, top);
+      g.fillStyle = edge; g.fillRect(Math.round(cx - half), ground - top, half * 2, 1);
+      g.fillStyle = dark; g.fillRect(Math.round(cx - half), ground - 1, half * 2, 1);
+    } else {
+      var hw = (d.w + 12) / 2;
+      g.fillStyle = stone; g.fillRect(Math.round(cx - hw), ground - 2, hw * 2, 2);
+      g.fillStyle = edge; g.fillRect(Math.round(cx - hw), ground - 2, hw * 2, 1);
+    }
+  }
+  function stepHeight(dx) {                                   // how far above the ground your character's feet are, dx pixels from the door's middle
+    var d = art.door, adx = Math.abs(dx);
+    if (art.stoep) {
+      var top = art.H - d.y - d.h, half = (d.w + 20) / 2;
+      if (adx <= half) return top;
+      var n = Math.floor((adx - half) / 6.72);
+      return n >= 5 ? 0 : Math.round(top * (5 - n) / 6);
+    }
+    return adx <= (d.w + 12) / 2 ? 2 : 0;
+  }
   function drawHero(g, h, ox, oy) {
     var t = h.t, d = h.d, img = h.ch.image, fw = img.width / 3, fh = img.height;
-    var door = ox + d.x + d.w / 2, foot = oy + d.y + d.h + 1, from = ox - 4, to = ox + art.W + 4;
+    var door = ox + d.x + d.w / 2, ground = oy + art.H, from = ox - 4, to = ox + art.W + 4;
     var seg = function (a, b) { return Math.min(1, Math.max(0, (t - a) / (b - a))); };
     var glow = Math.max(seg(HT.open, HT.open + 0.5) - seg(HT.gone, HT.gone + 0.4), seg(HT.back, HT.back + 0.4) - seg(HT.back + 0.8, HT.back + 1.2));
     if (glow > 0) { g.fillStyle = "rgba(255,179,92," + (0.92 * glow).toFixed(3) + ")"; g.fillRect(ox + d.x, oy + d.y, d.w, d.h); }
@@ -158,6 +193,7 @@
     else if (t < HT.leave) x = door;
     else { x = door + (to - door) * seg(HT.leave, HT.end); walking = true; alpha = 1 - seg(HT.end - 0.4, HT.end); }
     if (alpha <= 0) return;
+    var foot = ground - stepHeight(x - door);
     var f = walking ? 1 + Math.floor(t * 5) % 2 : 0;
     g.save(); g.globalAlpha = alpha; g.translate(Math.round(x), 0); g.scale(dir, 1);
     g.drawImage(img, f * fw, 0, fw, fh, -Math.round(fw / 2), foot - fh, fw, fh);
@@ -252,8 +288,9 @@
   /* (then: "none of anything should be instant": longer steps; the 3D street takes over from the picture over 0.4 s; the
      outline grows at an even pace on screen (geometrically) so it is still opening near the end; lamps spread over the
      whole night step; the moon, bulbs and foreground fade instead of popping) */
-  var OPEN = { lift: [0, 1100], reveal: [1250, 3000], night: [1250, 2900], lamps: [1600, 3300], camera: [3000, 4400], air: [3100, 4600] }, OPEN_MS = 4600;
-  var CLOSE = { air: [0, 600], camera: [0, 1300], reveal: [1300, 2500], night: [1700, 2550], lift: [2550, 3250] }, CLOSE_MS = 3250;
+  /* (2026-11-02, he asked: 25% faster) every time below runs at 1.25x */
+  var OPEN = { lift: [0, 880], reveal: [1000, 2400], night: [1000, 2320], lamps: [1280, 2640], camera: [2400, 3520], air: [2480, 3680] }, OPEN_MS = 3680;
+  var CLOSE = { air: [0, 480], camera: [0, 1040], reveal: [1040, 2000], night: [1360, 2040], lift: [2040, 2600] }, CLOSE_MS = 2600;
   var back = null, big = null, base = null, mask = null, sEnd = 12, playing = 0, skip = false;
   function ease(k) { return 0.5 - Math.cos(Math.PI * k) / 2; }   // gentle at both ends (softer than a cubic: the steps flow into each other)
   function lifted(u) {                                        // the picture, u of the way from its place to the centre (top-left origin)
@@ -305,7 +342,7 @@
     ui.querySelector(".street-close").addEventListener("click", closeStreet);
     // the sidebar's sound switch is hidden while the street is open, so it has a twin here (2026-10-28, he asked for one)
     var snd = document.getElementById("snd"), twin = ui.querySelector(".street-sound");
-    var mirror = function () { if (!snd) { twin.hidden = true; return; } twin.textContent = snd.textContent; twin.setAttribute("aria-pressed", snd.getAttribute("aria-pressed")); };
+    var mirror = function () { if (!snd) { twin.hidden = true; return; } twin.innerHTML = snd.innerHTML; twin.setAttribute("aria-label", snd.getAttribute("aria-label") || ""); twin.title = snd.title; twin.setAttribute("aria-pressed", snd.getAttribute("aria-pressed")); };
     twin.addEventListener("click", function () { if (snd) snd.click(); mirror(); }); mirror();
     document.body.classList.add("street-open");
     document.dispatchEvent(new CustomEvent("street", { detail: "open" }));
@@ -346,8 +383,9 @@
     };
     tick();
   }
-  function closeStreet() {
+  function closeStreet(after) {
     if (!open || busy) return;
+    afterClose = typeof after === "function" ? after : null;
     busy = true;
     S.walk(1, false); S.walk(-1, false); S.finish();           // everything still to light comes on before it closes
     document.dispatchEvent(new CustomEvent("street", { detail: "close" }));
@@ -370,7 +408,16 @@
       document.body.classList.remove("street-open");
       open = busy = false;
       carousel(CAROUSEL_MS);
+      if (afterClose) { var go = afterClose; afterClose = null; go(); }
     });
+  }
+  var afterClose = null, pickFor = null, study = null;
+  function pickLight(e) {                                     // a click on a lit lamp or window: the street closes as usual, then its application (2026-11-02, he asked)
+    if (!open || busy || !pickFor) return false;
+    var k = S.pick(e.clientX, e.clientY);
+    if (k < 0 || k >= lit) return false;
+    closeStreet(function () { pickFor(k); });
+    return true;
   }
   function showTip(e) {
     if (!open || busy || !ui) return;
@@ -453,8 +500,8 @@
         c.setAttribute("role", "img"); c.setAttribute("aria-label", opts.svg.getAttribute("aria-label") || "The street");
         c.style.position = "absolute"; c.style.visibility = "hidden"; c.style.width = c.style.height = "1px";   // only shown when opened
         opts.svg.parentNode.insertBefore(c, tile.nextSibling);
-        S.setLit(lit, false); if (todayN) S.setToday(todayN[0], todayN[1]);
-        c.addEventListener("click", function (e) { if (open && !S.dragged()) showTip(e); });
+        S.setLit(lit, false); if (todayN) S.setToday(todayN[0], todayN[1]); if (study) S.setStudy(study[0], study[1]);
+        c.addEventListener("click", function (e) { if (open && !S.dragged() && !pickLight(e)) showTip(e); });
         c.addEventListener("mousemove", showTip);
         return S.ready.then(function () {
           if (!(window.CharacterPage && CharacterPage.active())) S.run(false);   // nothing to draw until he opens it (unless the character page is showing it)
@@ -494,8 +541,11 @@
     },
     setToday: function (n, target) { todayN = [n, target]; if (S) S.setToday(n, target); },   // the foreground bulbs: today's applications
     labels: function (fn) { labelFor = fn; },
+    onPick: function (fn) { pickFor = fn; },                  // clicking a lit light in the open street
+    setStudy: function (stars, towers) { study = [stars, towers]; if (S) S.setStudy(stars, towers); },
     litCount: function () { return lit; },
     total: function () { return S ? S.total() : 0; },
-    open: openStreet
+    open: openStreet,
+    tileCanvas: function () { return tile && art && art.day ? tile : null; }   // Today mirrors it, big, when an application is sent
   };
 })();

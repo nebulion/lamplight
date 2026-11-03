@@ -199,3 +199,53 @@ function heroSprite(o0) {
   const t = tex(c); t.repeat.set(1 / 3, 1);
   return t;
 }
+
+/* Pedalling (2026-11-02, he asked: their legs didn't move on a bike). Four frames: the rider's top half from their standing
+   frame, legs drawn fresh from hip to pedal, with the colours read off the standing picture. No random draws. hip and bb
+   (the crank's centre) are in the frame's pixels; the pedal turns clockwise on screen, the way a rider facing right pedals. */
+function pedalSheet(src, fw, fh, hip, bb) {
+  const pc = document.createElement("canvas"); pc.width = fw; pc.height = fh;
+  const pg = pc.getContext("2d", { willReadFrequently: true }); pg.drawImage(src, 0, 0, fw, fh, 0, 0, fw, fh);
+  const hex = (d, i) => "#" + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join("");
+  const colAt = (y, fb) => { const d = pg.getImageData(0, y, fw, 1).data, xs = []; for (let x = 0; x < fw; x++) if (d[x * 4 + 3] > 128) xs.push(x); return xs.length ? hex(d, xs[Math.floor(xs.length / 2)] * 4) : fb; };
+  const shin = shade(colAt(fh - 7, "#2a2a34"), 0.2), thigh = shin, shoe = shade(colAt(fh - 1, "#1a1410"), 0.25);   // read off the legs, a little lighter so they show at night
+  const [c, g] = canvas(fw * 4, fh), R2 = 3;
+  const L = 0.56 * (bb[1] + R2 - hip[1]);
+  for (let f = 0; f < 4; f++) {
+    const X = f * fw; g.drawImage(src, 0, 0, fw, hip[1] + 1, X, 0, fw, hip[1] + 1);
+    const leg = (ang, dim) => {
+      const fx = bb[0] + Math.cos(ang) * R2, fy = bb[1] + Math.sin(ang) * R2, dx = fx - hip[0], dy = fy - hip[1], d = Math.hypot(dx, dy);
+      const up = Math.sqrt(Math.max(0, L * L - d * d / 4)), kx = hip[0] + dx / 2 + (dy / d) * up, ky = hip[1] + dy / 2 - (dx / d) * up;   // the knee bends forward
+      const a = dim ? shade(thigh, -0.25) : thigh, b = dim ? shade(shin, -0.25) : shin, sh = dim ? shade(shoe, -0.25) : shoe;
+      for (const o of [0, 1]) { line(g, Math.round(X + hip[0] + o - 1), Math.round(hip[1]), Math.round(X + kx + o - 1), Math.round(ky), a); line(g, Math.round(X + kx + o - 1), Math.round(ky), Math.round(X + fx + o - 1), Math.round(fy), b); }
+      R(g, Math.round(X + fx - 1), Math.round(fy), 4, 2, sh);
+    };
+    const ang = f * Math.PI / 2;
+    leg(ang + Math.PI, true); leg(ang, false);
+  }
+  const t = tex(c); t.repeat.set(1 / 4, 1);
+  return t;
+}
+/* A bike with turning wheels and cranks, four frames (the street's parked bikes stay still). */
+function bikeSheet(wheel, fr, saddle, bar, crate) {
+  const t = sprite(160, 24, (g) => {
+    for (let f = 0; f < 4; f++) {
+      const X = f * 40, ang = f * Math.PI / 4;
+      const w = (cx) => {
+        for (let a = 0; a < 64; a++) { const r = a / 64 * Math.PI * 2; P(g, X + Math.round(cx + Math.cos(r) * 7), Math.round(16 + Math.sin(r) * 7), (a + f * 4) % 16 < 8 ? wheel[0] : wheel[1]); }
+        const dx = Math.round(Math.cos(ang) * 5), dy = Math.round(Math.sin(ang) * 5);
+        line(g, X + cx - dx, 16 - dy, X + cx + dx, 16 + dy, wheel[2]); line(g, X + cx + dy, 16 - dx, X + cx - dy, 16 + dx, wheel[2]); P(g, X + cx, 16, wheel[3]);
+      };
+      w(8); w(31);
+      const fl = (x0, y0, x1, y1) => line(g, X + x0, y0, X + x1, y1, fr);
+      fl(8, 16, 16, 16); fl(16, 16, 27, 8); fl(14, 7, 27, 8); fl(14, 7, 16, 16); fl(8, 16, 14, 7); fl(27, 8, 31, 16);
+      R(g, X + 11, 5, 6, 2, saddle); line(g, X + 27, 8, X + 26, 3, bar); R(g, X + 24, 3, 5, 1, bar);
+      R(g, X + 29, 4, 7, 4, crate[0]); R(g, X + 30, 5, 5, 2, crate[1]);
+      const ca = f * Math.PI / 2, px = Math.round(Math.cos(ca) * 3), py = Math.round(Math.sin(ca) * 3);   // the crank and its pedals
+      line(g, X + 16 - px, 16 - py, X + 16 + px, 16 + py, wheel[3]); R(g, X + 15 + px, 16 + py, 3, 1, wheel[3]); R(g, X + 15 - px, 16 - py, 3, 1, wheel[2]);
+    }
+  });
+  t.repeat.set(1 / 4, 1);
+  return t;
+}
+

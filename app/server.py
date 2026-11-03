@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import finder  # noqa: E402
 import firstrun  # noqa: E402
 import person  # noqa: E402
+import skills
 import store  # noqa: E402
 import make_resumes  # noqa: E402
 
@@ -36,6 +37,8 @@ STATIC = {  # the only files the server hands out
     "setup.js": "text/javascript; charset=utf-8",
     "interview.js": "text/javascript; charset=utf-8",
     "finder.js": "text/javascript; charset=utf-8",
+    "ask.js": "text/javascript; charset=utf-8",
+    "skills.js": "text/javascript; charset=utf-8",
     "interview.json": "application/json; charset=utf-8",
     "favicon.svg": "image/svg+xml",
     "scene3d.js": "text/javascript; charset=utf-8",
@@ -86,7 +89,7 @@ def _resume_make(body, letter=False):
         job = store.find_job(store.load(), body["job_id"])
     folder = "custom/" + make_resumes.slug(job["employer"] + " " + job["title"]) if job else "custom/general"
     out = _inside_resumes(folder)
-    r = make_resumes.render_letter(body["content"], out) if letter else make_resumes.render(body["content"], out)
+    r = make_resumes.render_letter(body["content"], out) if letter else make_resumes.render_all(body["content"], out)
     if job:
         patch = {"cover_file": r["pdf"], "cover_spec": body.get("spec")} if letter else {"resume_file": r["pdf"], "resume_spec": body.get("spec")}
         store.change(lambda d: store.patch_job(d, job["id"], patch))
@@ -121,6 +124,8 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path == "/api/data":
             return self._send(200, store.load())
+        if path == "/api/skills":                           # the Skills page: their list, and study plans read from their notes
+            return self._send(200, skills.load())
         if path == "/api/profile":
             return self._send(200, {**person.load(), "exists": person.exists()})
         if path.lstrip("/") in PERSONAL:

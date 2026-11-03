@@ -60,39 +60,15 @@ function drawSprite(g, opts, x, footY, frame) {
   var img = S.drawPerson(opts), fw = img.width / 3, fh = img.height;
   g.drawImage(img, (frame || 0) * fw, 0, fw, fh, Math.round(x - fw / 2), footY - fh, fw, fh);
 }
-/* The live preview is the real street (he asked to see what it will actually look like): while this page is open, the
-   street's canvas moves into the preview box and shows your character close up by a door, at night, with its lamps,
-   shadows and blur. It goes back to the sidebar when you leave the page or open the street. */
-var parked = null, stageObs = null, loading = false;
-function stageSize() {
-  var box = $("#ch-stage"); if (!box || !parked) return;
-  var w = Math.max(80, Math.round(box.clientWidth)), h = Math.max(80, Math.round(box.clientHeight));
-  S.setFrame({ w: w, h: h, rect: { x: 0, y: 0, w: w, h: h }, t: 1 });
-}
-function stageOn() {
-  var box = $("#ch-stage"); if (!box || parked || !S) return;
-  var c = S.canvas, lit = window.Scene && Scene.litCount ? Scene.litCount() : 0;
-  if (!c.parentNode) { setTimeout(stageOn, 300); return; }      // the sidebar hasn't placed it yet
-  parked = { parent: c.parentNode, next: c.nextSibling, css: c.style.cssText };
-  box.appendChild(c); c.style.cssText = "position:static;display:block;width:100%;height:100%;visibility:visible;opacity:1;cursor:default";
-  S.setQuality({ scale: Math.min(window.devicePixelRatio || 1, 2), fps: 60, fx: 1 }); S.lamps("on"); S.setInteractive(false);
-  stageSize(); S.showcase(true, lit > 0 ? S.lightX(0) : S.x); S.setCharacter(cur); S.run(true);   // by your first lamp (lit first, nearest home), so the light shows
-  if (window.ResizeObserver) { stageObs = new ResizeObserver(stageSize); stageObs.observe(box); }
-}
-function stageOff() {
-  if (!parked || !S) return;
-  if (stageObs) { stageObs.disconnect(); stageObs = null; }
-  var c = S.canvas;
-  S.showcase(false); S.run(false); S.setCharacter(saved);
-  parked.parent.insertBefore(c, parked.next); c.style.cssText = parked.css; parked = null;
-}
-document.addEventListener("street", function (e) { if (e.detail === "open") stageOff(); });   // the street opening takes its canvas back
-function drawPreview() {                                      // the 3D view follows cur; the close-up shows its pixels, all three frames
+var loading = false;
+/* (2026-10-28, he asked) no rendered street here any more: it crowded the maker. Just the character, big, standing, and
+   its two walking frames small beneath. */
+function drawPreview() {
   if (!S) return;
-  if (parked) S.setCharacter(cur);
-  var cv = $("#ch-sprite"); if (!cv) return;
-  var img = S.drawPerson(cur), g = cv.getContext("2d");
-  cv.width = img.width; cv.height = img.height; g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0);
+  var img = S.drawPerson(cur), fw = img.width / 3, fh = img.height;
+  var big = $("#ch-sprite"), walk = $("#ch-walk");
+  if (big) { big.width = fw; big.height = fh; var g = big.getContext("2d"); g.imageSmoothingEnabled = false; g.clearRect(0, 0, fw, fh); g.drawImage(img, 0, 0, fw, fh, 0, 0, fw, fh); }
+  if (walk) { walk.width = fw * 2; walk.height = fh; var w = walk.getContext("2d"); w.imageSmoothingEnabled = false; w.clearRect(0, 0, fw * 2, fh); w.drawImage(img, fw, 0, fw * 2, fh, 0, 0, fw * 2, fh); }
 }
 function drawPresets() {
   root.querySelectorAll(".ch-preset canvas").forEach(function (cv) {
@@ -126,8 +102,8 @@ function build() {
   root.innerHTML =
     '<h1>Your character</h1>' +
     '<p class="lede">They live in the street. When you log an application, they go and light its light. In the open street, A / D walks them and B gets them on or off their bike.</p>' +
-    '<div class="ch-wrap"><div class="ch-views"><div id="ch-stage" class="ch-stage" role="img" aria-label="Your character in the street"></div>' +
-    '<p class="small ch-cap">In the street, as it will look. Up close, its three frames:</p><canvas id="ch-sprite" class="ch-sprite" aria-label="Your character up close"></canvas></div>' +
+    '<div class="ch-wrap"><div class="ch-views"><canvas id="ch-sprite" class="ch-sprite" aria-label="Your character"></canvas>' +
+    '<canvas id="ch-walk" class="ch-walk" aria-label="Walking"></canvas><p class="small ch-cap">Walking</p></div>' +
     '<div class="ch-side"><h2 class="ch-h">Start from</h2><div class="ch-presets">' +
     PARTS.presets.map(function (p) { return '<button type="button" class="ch-preset" data-p="' + p[0] + '" aria-pressed="false"><canvas data-p="' + p[0] + '" width="28" height="44"></canvas><span>' + esc(p[1]) + "</span></button>"; }).join("") +
     '</div><p><button type="button" class="quiet" id="ch-random">Surprise me</button></p>' +
@@ -161,7 +137,7 @@ function save() {
 function open() {
   root = document.getElementById("character");
   if (!root) return;
-  if (S && PARTS) { cur = copy(saved); render(); stageOn(); return; }
+  if (S && PARTS) { cur = copy(saved); render(); return; }
   if (loading) return;                                        // (the page can be asked twice while it loads)
   loading = true;
   root.innerHTML = '<h1>Your character</h1><p class="lede">Loading the street…</p>';
@@ -172,9 +148,9 @@ function open() {
       saved = migrate(res[1].character || DEFAULT); cur = copy(saved);
       return S.ready;
     })
-    .then(function () { build(); render(); if (document.getElementById("character") && !document.getElementById("character").hidden) stageOn(); })
+    .then(function () { build(); render(); })
     .catch(function () { root.innerHTML = '<h1>Your character</h1><p class="lede">The character lives in the 3D street, which this browser can’t show (it needs WebGL2).</p>'; });
 }
 
-window.CharacterPage = { open: open, leave: stageOff, active: function () { return !!parked; } };
+window.CharacterPage = { open: open, leave: function () {}, active: function () { return false; } };
 })();

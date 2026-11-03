@@ -102,7 +102,8 @@ function buildHouse(s, hx, i, edge) {
   const outer = target;
   if (s.lean) {                                              // the dancing houses lean sideways and forward ("op vlucht"), each its own way
     const pv = new THREE.Group(), inner = new THREE.Group();
-    pv.position.set(hx + w / 2, 0, zOff); pv.rotation.set(s.lean[1], 0, s.lean[0]);
+    const fit = s.leanFit || 1;                              // the last of the row is a touch narrower, so its top clears the upright house beside it
+    pv.position.set(hx + w / 2 * fit, 0, zOff); pv.rotation.set(s.lean[1], 0, s.lean[0]); pv.scale.x = fit;
     inner.position.set(-(hx + w / 2), 0, -zOff); pv.add(inner); target.add(pv); target = inner;
   }
   buildFacade(f, s, hx, zOff, lidMat(std({ map: f.map, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 1.25 }), f.litMap));
@@ -179,20 +180,24 @@ function genHouse(o = {}) {
   return s;
 }
 const dancing = (k) => genHouse({ w: +(4.1 + rnd() * 0.6).toFixed(1), eave: +(11 + rnd() * 1.6).toFixed(1), gable: pick(["bell", "neck", "step", "spout"]),
-  lean: [(k % 2 ? 1 : -1) * (0.02 + rnd() * 0.02), 0.012 + rnd() * 0.01], pilasters: false, balcony: 0 });
+  lean: [(rnd(), -(0.012 + k * 0.003)), 0.012 + rnd() * 0.01], leanFit: k === 4 ? 0.93 : 1, pilasters: false, balcony: 0 });   // (2026-11-02: they used to lean toward each other and cut through; the rnd() keeps every later draw in place)
 
 // ================================================================== shared props
 const ironMat = std({ color: 0x16140f });
+/* What people walk around on the quay (2026-11-02, he asked: things can't pass through each other). Rectangles, block-local. */
+const OBST = [];
+function obst(x0, x1, z0, z1) { if (curBlock && z1 > 1 && z0 < 9) OBST.push({ b: curBlock, x0, x1, z0, z1 }); }
 const bikeMat = std({ map: bikeTex, alphaTest: 0.5, side: THREE.DoubleSide });
-function bikes(x, n, z = 7.2) { for (let k = 0; k < n; k++) { const b = add(new THREE.PlaneGeometry(2.5, 1.5), bikeMat, x + k * 0.55, 0.75, z + (k % 2) * 0.1); b.rotation.y = 1.25; } }
+function bikes(x, n, z = 7.2) { obst(x - 1.3, x + (n - 1) * 0.55 + 1.3, z - 0.3, z + 0.6); for (let k = 0; k < n; k++) { const b = add(new THREE.PlaneGeometry(2.5, 1.5), bikeMat, x + k * 0.55, 0.75, z + (k % 2) * 0.1); b.rotation.y = 1.25; } }
 const barrelMat = std({ map: woodTex("#6a4a2c") });
-function barrel(x, z) { add(new THREE.CylinderGeometry(0.34, 0.34, 0.85, 10), barrelMat, x, 0.43, z); }
+function barrel(x, z) { obst(x - 0.36, x + 0.36, z - 0.36, z + 0.36); add(new THREE.CylinderGeometry(0.34, 0.34, 0.85, 10), barrelMat, x, 0.43, z); }
 const crateMat = std({ map: crateTex });
-function crate(x, z, y, top) { const m = top ? [crateMat, crateMat, std({ map: top }), crateMat, crateMat, crateMat] : crateMat; add(new THREE.BoxGeometry(0.7, 0.7, 0.7), m, x, (y || 0) + 0.35, z); }
+function crate(x, z, y, top) { obst(x - 0.4, x + 0.4, z - 0.4, z + 0.4); const m = top ? [crateMat, crateMat, std({ map: top }), crateMat, crateMat, crateMat] : crateMat; add(new THREE.BoxGeometry(0.7, 0.7, 0.7), m, x, (y || 0) + 0.35, z); }
 const planterBoxMat = std({ map: woodTex("#3a2a1c") }), bushMat = std({ map: bushTex, alphaTest: 0.5, side: THREE.DoubleSide });
-function planter(x, z) { add(new THREE.BoxGeometry(0.9, 0.55, 0.9), planterBoxMat, x, 0.28, z); const b = add(new THREE.PlaneGeometry(1.2, 0.72), bushMat, x, 0.85, z); b.rotation.y = 0.2; }
+function planter(x, z) { obst(x - 0.55, x + 0.55, z - 0.55, z + 0.55); add(new THREE.BoxGeometry(0.9, 0.55, 0.9), planterBoxMat, x, 0.28, z); const b = add(new THREE.PlaneGeometry(1.2, 0.72), bushMat, x, 0.85, z); b.rotation.y = 0.2; }
 const benchMat = std({ map: woodTex("#5a3a22") });
 function bench(x, z, back) {                                 // facing the canal
+  obst(x - 1.05, x + 1.05, z - 0.45, z + 0.4);
   add(new THREE.BoxGeometry(2.0, 0.12, 0.6), benchMat, x, 0.5, z); add(new THREE.BoxGeometry(2.0, 0.6, 0.1), benchMat, x, 0.8, z + (back || -0.3));
   for (const dx of [-0.85, 0.85]) add(new THREE.BoxGeometry(0.08, 0.44, 0.55), bracketMat, x + dx, 0.22, z);
 }
@@ -222,6 +227,7 @@ function houseExtras(b) {                                    // hollyhocks again
 
 // ------------------------------------------------------------------ lamps: each one a light of its own
 function lamp(x, z, near) {
+  obst(x - 0.18, x + 0.18, z - 0.18, z + 0.18);
   const lid = newLid("lamp");
   const g = new THREE.Group(), postH = (LAMP_H - LAMP_HEAD) / PX, headH = LAMP_HEAD / PX;
   const post = new THREE.Mesh(new THREE.PlaneGeometry(1, postH), std({ map: lampArt.post.map, alphaTest: 0.5, side: THREE.DoubleSide }));

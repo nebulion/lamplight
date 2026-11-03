@@ -46,7 +46,7 @@ Then comes **the job interview**: about 15 minutes of questions on what you'd lo
 
 ### 5. Getting jobs in
 - **Claude Pro or higher:** the end of the interview shows a prompt. In the Claude desktop app, open **Scheduled tasks**, create a daily task with that prompt, and run it once. It fills your Inbox every morning while the app is open.
-- **Free plan:** on the **Inbox**, use **Find jobs with Claude**:
+- **Free plan:** on **Jobs**, open the **Inbox** tab and use **Find jobs with Claude**:
   1. copy the prompt;
   2. paste it into a new chat at claude.ai;
   3. paste Claude's answer back.
@@ -73,7 +73,10 @@ Then comes **the job interview**: about 15 minutes of questions on what you'd lo
 - **Your character** lives in the street. When you log an application, they go and light its light.
   - In the open street (click the house in the sidebar): **A / D** walk, **B** gets on the bike, **W / S** pan, **↑ / ↓** tilt, **← / →** turn, the wheel zooms, **Esc** closes.
 - **Resume** and **Cover letter** build a one-page resume and a short letter for a job, from your own words, and make the PDFs.
-- **Sidebar: full / slim / menu only** (under Sound) makes the sidebar smaller.
+- **The arrow at the top of the sidebar** makes it smaller, in two steps.
+- **Up next** (a tab of Jobs) is your own hand-ordered list; Today takes from it first. Right-click a job anywhere for everything you can do with it.
+- **Addresses:** add `"addresses"` to `data/profile.json` to make a resume and letter per address. Mark one `"drop_first": true` and its file name leaves out your first name, so you can tell them apart.
+- **Skills:** add `data/skills.json` for a page of certificates, courses and books. List Markdown study plans under `"study_plans"` in `data/profile.json` and it reads their tick boxes. Finished sessions add stars to the street's sky, and certificates floodlight its church towers.
 
 ## If something's off
 - **The page won't open:** the little server isn't running. Open it again (step 4). To see an error, run `python app/server.py` in a terminal in the folder.

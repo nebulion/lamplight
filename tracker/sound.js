@@ -19,7 +19,10 @@
     tower: "/sounds/westertoren.ogg",
     street: "/sounds/street-night.mp3"
   };
-  var TRAM_DING = { start: 83.45, dur: 1.8 };      // where the tram bell rings in the Leidsestraat recording
+  var TRAM_DING = { start: 83.45, dur: 1.8 };
+  // one clean high note of the Westertoren carillon (found by analysis 2026-10-28: a sharp rise in the 2 kHz band at 19.1 s, a
+  // smooth 1.2 s decay, no low-band rise), played when your character's light comes on
+  var LIGHT_CHIME = { start: 19.05, dur: 1.25 }, CHIME_GAIN = 1.2;   // about 0.012 RMS: just above the bike bell on a log (0.009), still calm      // where the tram bell rings in the Leidsestraat recording
   // clean rings in the Dutch bike-bell recording (found by their 2.4-4.8 kHz ring and decay)
   var BIKE_RINGS = [{ start: 4.05, dur: 0.95 }, { start: 11.98, dur: 0.6 }, { start: 4.98, dur: 1.5 }];
   var ctx = null, master = null, cache = {}, canal = null, boat = null, street = null;
@@ -140,6 +143,7 @@
     else bikeRing(BIKE_RINGS[sentCount % BIKE_RINGS.length], 0.5);
   }
   function bikeRing(r, g) { play("bike", { start: r.start, dur: r.dur, gain: g, fadeIn: 0.005, fadeOut: 0.25 }); }
+  function lightChime() { if (on) play("tower", { start: LIGHT_CHIME.start, dur: LIGHT_CHIME.dur, gain: CHIME_GAIN, fadeIn: 0.004, fadeOut: 0.5 }); }
   function tramDing(g) { play("tram", { start: TRAM_DING.start, dur: TRAM_DING.dur, gain: g, fadeOut: 0.6 }); }
   function streetOpened() {
     if (!on) return;
@@ -165,13 +169,20 @@
   }, 20000);
 
   /* ---------------------------------------------------------------- switches */
+  var SPEAKER = '<path d="M2.5 6h2.8L9 3v10L5.3 10H2.5z" fill="currentColor"/>';
+  var ICON = {
+    on: '<svg viewBox="0 0 18 16" width="17" height="15" aria-hidden="true">' + SPEAKER + '<path d="M11.5 5.6c.8.7 1.2 1.5 1.2 2.4s-.4 1.7-1.2 2.4M13.6 3.6c1.4 1.2 2.1 2.7 2.1 4.4s-.7 3.2-2.1 4.4" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
+    off: '<svg viewBox="0 0 18 16" width="17" height="15" aria-hidden="true">' + SPEAKER + '<path d="m11.5 5.5 4.5 5m0-5-4.5 5" stroke="currentColor" stroke-width="1.3"/></svg>',
+    amb: '<svg viewBox="0 0 18 16" width="17" height="15" aria-hidden="true"><path d="M1.5 5c2-1.4 3.5-1.4 5 0s3 1.4 5 0 3.5-1.4 5 0M1.5 8.5c2-1.4 3.5-1.4 5 0s3 1.4 5 0 3.5-1.4 5 0M1.5 12c2-1.4 3.5-1.4 5 0s3 1.4 5 0 3.5-1.4 5 0" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>'
+  };
+  function label(el, t) { el.setAttribute("aria-label", t); el.title = t; }
   function render() {
     var s = document.getElementById("snd"), a = document.getElementById("amb");
     if (!s) return;
-    s.textContent = on ? "Sound on" : "Sound off";
+    s.innerHTML = on ? ICON.on : ICON.off; label(s, on ? "Sound on" : "Sound off");          // icons (2026-10-28, he asked)
     s.setAttribute("aria-pressed", on);
     a.hidden = !on;
-    a.textContent = amb ? "Street ambience on" : "Street ambience off";
+    a.innerHTML = ICON.amb; label(a, amb ? "Street ambience on" : "Street ambience off");
     a.setAttribute("aria-pressed", amb);
   }
   function setOn(v) {
@@ -189,7 +200,7 @@
     render();
     // browsers only allow sound after a click: if it was left on, wake up on the first one
     if (on) document.addEventListener("pointerdown", function wake() { document.removeEventListener("pointerdown", wake); audio(); startAmbience(); }, { once: true });
-    document.addEventListener("street", function (e) { if (e.detail === "open") streetOpened(); else streetClosed(); });
+    document.addEventListener("street", function (e) { if (e.detail === "open") streetOpened(); else if (e.detail === "close") streetClosed(); else if (e.detail === "lit") lightChime(); else if (e.detail === "tram" && on) tramDing(0.5); });
   }
 
   window.Sound = { init: init, sent: sent };

@@ -42,6 +42,7 @@ def cmd_add(args):
         out = []
         for job in jobs:
             job.setdefault("source", "daily scan")
+            job["status"] = "inbox"                  # everything new lands in the Inbox first (2026-11-02, he asked)
             out.append((job.get("title"), store.add_job(doc, job)))
         return out
 
@@ -67,22 +68,13 @@ def cmd_summary(_):
     queued.sort(key=lambda j: (j.get("closes") or "9999", -(j.get("match") or 0)))
     is_open = [j for j in doc["jobs"]
                if j["status"] in ("inbox", "queued", "later") and j.get("fit") != "watch"]
-    everyday = sum(1 for j in is_open if "everyday" in j.get("paths", []))
-    open_jobs = len(is_open) - everyday          # career jobs; gyms/venues/outdoors have their own target
-    target = s.get("jobs_target", 100)
-    ev_target = s.get("everyday_target", 50)
     print(json.dumps({
         "today": store.today(),
         "votes_total": len(votes),
         "votes_today": sum(1 for v in votes if v["date"] == store.today()),
         "daily_target": s.get("daily_target", 5),
         "last_vote": votes[-1]["date"] if votes else None,
-        "open_jobs": open_jobs,
-        "jobs_target": target,
-        "jobs_needed": max(target - open_jobs, 0),
-        "everyday_open": everyday,
-        "everyday_target": ev_target,
-        "everyday_needed": max(ev_target - everyday, 0),
+        "open_jobs": len(is_open),                   # no limits on how many (2026-11-02, he asked)
         "inbox_count": sum(1 for j in doc["jobs"] if j["status"] == "inbox"),
         "next_jobs": [{k: j.get(k) for k in ("employer", "title", "closes", "match", "why")}
                       for j in queued[:s.get("daily_target", 5)]],

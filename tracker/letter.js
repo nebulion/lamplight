@@ -280,7 +280,8 @@ function makePDF() {
       btn.disabled = false; closePreview();
       var f = j.result.pdf;
       note.innerHTML = (j.result.pages === 1 ? "Saved, one page: " : '<span class="over">It came out at ' + j.result.pages + " pages; drop a sentence.</span> Saved: ") +
-        "<b>" + esc(f.split("/").pop()) + "</b> in resumes/" + esc(f.split("/").slice(0, -1).join("/")) + ' <button class="quiet" data-act="reveal" data-file="' + esc(f) + '">Show file</button>' +
+        (j.result.versions || [{ pdf: f }]).map(function (v) { return "<b>" + esc(v.pdf.split("/").pop()) + "</b>" + (v.location ? " (" + esc(v.location) + ")" : "") + ' <button class="quiet" data-act="reveal" data-file="' + esc(v.pdf) + '">Show file</button>'; }).join(", ") +
+        " in resumes/" + esc(f.split("/").slice(0, -1).join("/")) +
         (job ? ' <span class="small">Today will say to attach it for this job.</span>' : "");
       if (j.data) window.App.setData(j.data);
     })
@@ -348,8 +349,9 @@ document.addEventListener("click", function (e) {
   var what = b.getAttribute("data-sig");
   if (what === "draw") openPad();
   else if (what === "clear") {
-    if (!confirm("Remove your signature? Letters you already made keep theirs.")) return;
-    fetch("/api/signature_clear", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(function () { SIG = { exists: false, v: 0 }; sigLine(); });
+    Ask.yes({ title: "Remove your signature?", note: "Letters you already made keep theirs.", ok: "Remove it" }).then(function (ok) {
+      if (ok) fetch("/api/signature_clear", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(function () { SIG = { exists: false, v: 0 }; sigLine(); });
+    });
   }
   else if (what === "reset") { closePad(); openPad(); $("sig-msg").textContent = ""; }
   else if (what === "save") savePad();

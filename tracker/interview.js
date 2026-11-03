@@ -15,7 +15,7 @@ function post(name, body) {
 
 function question(q) {
   var v = prefs[q.key], h = '<div class="iv-q"><p class="iv-label">' + esc(q.label) + "</p>";
-  if (q.kind === "text") h += '<input class="iv-text" data-k="' + q.key + '" value="' + esc(v || "") + '">';
+  if (q.kind === "text") h += '<textarea class="iv-text" rows="1" data-k="' + q.key + '">' + esc(v || "") + "</textarea>";   // grows with the answer, so long ones aren't cut off
   if (q.kind === "pick" || q.kind === "multi") h += '<div class="iv-opts">' + q.options.map(function (o) {
     var on = q.kind === "pick" ? v === o : (v || []).indexOf(o) >= 0;
     return '<button type="button" class="ch-opt" data-k="' + q.key + '" data-v="' + esc(o) + '" aria-pressed="' + on + '">' + esc(o) + "</button>";
@@ -35,6 +35,7 @@ function render() {
     '<div class="iv-body">' + r.questions.map(question).join("") + "</div>" +
     '<p class="actions ch-end"><button type="button" class="btn primary" id="iv-next">Save and go on</button>' +
     (at ? ' <button type="button" class="quiet" id="iv-back">Back</button>' : "") + ' <button type="button" class="quiet" id="iv-skip">Skip this round</button> <span class="small su-err" id="iv-err"></span></p>';
+  fitText();
   window.scrollTo(0, 0);
 }
 function renderScan() {
@@ -51,6 +52,9 @@ function after(res) {
     "<li>Run it once now to fill your Inbox.</li></ol>";
   else box.innerHTML = '<p>Saved. When you want new jobs, open the <a href="#inbox">Inbox</a> and use <b>Find jobs with Claude</b>.</p>';
 }
+function fitText() { if (root) root.querySelectorAll(".iv-text").forEach(function (t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; }); }
+document.addEventListener("input", function (e) { if (e.target.classList && e.target.classList.contains("iv-text")) fitText(); });
+window.addEventListener("resize", fitText);
 function readText() { root.querySelectorAll(".iv-text").forEach(function (i) { prefs[i.getAttribute("data-k")] = i.value.trim(); }); }
 function saveRound() {
   readText();

@@ -74,7 +74,8 @@ function addPerson(opts) {
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 12), shadowMat);
   shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1, 0.55, 1); shadow.position.set(opts.x, 0.02 + (opts.y || 0), opts.z); parent.add(shadow);
   if (opts.dog) { opts.dogMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.62), std({ map: dogTex.clone(), alphaTest: 0.5, side: THREE.DoubleSide })); opts.dogMesh.position.set(opts.x + 1, 0.31, opts.z + 0.35); opts.dogMesh.material.map.needsUpdate = true; scene.add(opts.dogMesh); }
-  people.push(Object.assign({ mesh, shadow, t, phase: rnd() * 10, home: opts.x }, opts));
+  if (!walker) obst(opts.x - 0.35, opts.x + 0.35, opts.z - 0.3, opts.z + 0.3);   // someone standing: walkers go round them
+  people.push(Object.assign({ mesh, shadow, t, phase: rnd() * 10, home: opts.x, zNow: opts.z, go: 1 }, opts));
 }
 function walkers() {                                         // they walk around wherever the camera is
   const W = [
@@ -88,12 +89,14 @@ function walkers() {                                         // they walk around
   ];
   W.forEach((o, k) => addPerson(Object.assign({ x: -40 + k * 13 + rnd() * 6 }, o)));
 }
-const cycl = { x: -30, z: 6.4, speed: 4.2 };
-let cycBike, cycRider, cycShadow;
+const cycl = { x: -30, z: 6.4, speed: 4.2, go: 1, f: 0 };
+let cycBike, cycRider, cycShadow, cycBikeTex, cycPedal;
 function cyclist() {
-  cycBike = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.5), bikeMat); cycBike.position.set(0, 0.75, cycl.z);
-  cycRider = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), std({ map: person({ coat: "#4a5a3a", scarf: "#c86a3a", hairStyle: "short", hair: "#5a3a1e" }), alphaTest: 0.5, side: THREE.DoubleSide }));
-  cycRider.position.set(0, 1.75, cycl.z);
+  cycBikeTex = bikeSheet(["#141312", "#1e1c1a", "#3a3836", "#8a8a84"], "#3c5a74", "#1d1a17", "#2a2a2a", ["#6d4a2a", "#8a5e34"]);
+  cycBike = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.5), std({ map: cycBikeTex, alphaTest: 0.5, side: THREE.DoubleSide })); cycBike.position.set(0, 0.75, cycl.z);
+  cycPedal = pedalSheet(person({ coat: "#4a5a3a", scarf: "#c86a3a", hairStyle: "short", hair: "#5a3a1e" }).image, FW, FH, [10, 21], [9.5, 33]);   // same person, seated, pedalling (2026-11-02)
+  cycRider = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), std({ map: cycPedal, alphaTest: 0.5, side: THREE.DoubleSide }));
+  cycRider.position.set(0, PH / 2 + 0.3, cycl.z);
   cycShadow = new THREE.Mesh(new THREE.CircleGeometry(0.9, 12), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.4, depthWrite: false }));
   cycShadow.rotation.x = -Math.PI / 2; cycShadow.scale.set(1.3, 0.35, 1);
   scene.add(cycBike, cycRider, cycShadow);
@@ -329,9 +332,14 @@ function buildBack3D(L) {
   }
   flush(Math.min(x, L));
 }
+/* (2026-11-02, he asked: the background shouldn't float) From a raised view you could see past the roofs to bare sky under the
+   next row of houses. The town now has ground: dark earth from behind the front row to the far distance, under everything. */
+const behindGround = new THREE.Mesh(new THREE.PlaneGeometry(1400, 500), std({ color: 0x191b16 }));
+behindGround.rotation.x = -Math.PI / 2; behindGround.position.set(0, -0.03, -251.5); behindGround.receiveShadow = false;
 function buildBackground(L) {
   const seedWas = seed;
   buildBack3D(L);
+  scene.add(behindGround);
   // (a far painted silhouette row was tried and removed: Octopath has nothing like it, he said)
   seed = seedWas;
 }
@@ -407,6 +415,7 @@ const towerBlue = std({ color: 0x33507a }), towerGold = std({ color: 0xa8894a })
 const clockTex = sprite(16, 16, (g) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - 7.5, y - 7.5); if (d < 7.5) P(g, x, y, d > 6.4 ? "#c8a050" : "#e8dcc0"); } R(g, 7, 3, 2, 5, "#1a1c24"); R(g, 7, 7, 4, 2, "#1a1c24"); });
 const clockMat = std({ map: clockTex, emissiveMap: clockTex, emissive: 0xffffff, emissiveIntensity: 0.5, alphaTest: 0.5 });   // the clock faces are lit at night
 [towerBrick, towerStone, towerBlue, towerGold, towerGreen, towerSlate, clockMat].forEach((m) => { m.fog = false; });   // the towers stand out of the haze, lit by the moon
+const TOWERS = [];
 function tower3d(kind, tx, tz) {
   /* scaled like a stage set (Octopath shrinks its landmarks): at this low camera the top of the view reaches only ~25 m
      that far back, so each tower is made small enough for its crown to show over the back rows */
@@ -432,6 +441,11 @@ function tower3d(kind, tx, tz) {
   } else {                                                   // the Oude Kerk's tower
     box(7, 0, 26, towerBrick); box(5.4, 26, 6, towerStone); clock(29, 5.4, 2.4); oct(2.2, 32, 4.5, towerSlate); cone(1.9, 36.5, 13, towerSlate);
   }
+  /* A floodlight on this tower (2026-11-02): each certificate marked Done on the Skills page lights one. The wash is the same
+     shapes, drawn again in warm light over the tower. Off until then; never tied to applications. */
+  const wash = new THREE.Group(), wmat = new THREE.MeshBasicMaterial({ color: 0xffc07a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  grp.children.slice().forEach((m) => { if (!m.isMesh) return; const c = new THREE.Mesh(m.geometry, wmat); c.position.copy(m.position); c.rotation.copy(m.rotation); c.scale.copy(m.scale).multiplyScalar(1.004); c.castShadow = c.receiveShadow = false; wash.add(c); dynamic.push(c); });
+  wash.visible = false; grp.add(wash); TOWERS.push({ wash, mat: wmat, v: 0, goal: 0 });
   target = outer;
 }
 
@@ -465,7 +479,33 @@ function wallTex(len, hM, litP, o = {}) {                    // a painted brick 
 let seed3 = 20261029;
 const rnd2b = () => ((seed3 = (seed3 * 16807) % 2147483647) - 1) / 2147483646;
 const pick2 = (a) => a[Math.floor(rnd2b() * a.length)];
+/* (2026-11-02, he asked: the tram street's buildings looked broken) These walls were thin slabs standing alone, with nothing
+   behind them and no roof. Each now has real houses behind it: a block 6 m deep, split into house widths, each with its own
+   pitched roof and now and then a chimney. Own random sequence, so nothing on the street moves. */
+let seed6 = 20261102;
+const rnd6 = () => ((seed6 = (seed6 * 16807) % 2147483647) - 1) / 2147483646;
+function wallMass(x, z, len, hM, rotY) {
+  const D = 6, ox = -Math.sin(rotY), oz = -Math.cos(rotY), ax = Math.cos(rotY), az = -Math.sin(rotY);   // o: straight back from the wall; a: along it
+  let s0 = -len / 2, s1 = len / 2;
+  if (Math.abs(oz) < 0.5) { if (az > 0) s1 -= 1.2; else s0 += 1.2; }   // walls running back from the quay stop short of the front row's fronts
+  const L = s1 - s0, mid = (s0 + s1) / 2; if (L < 1) return;
+  const V = (s, d, y) => new THREE.Vector3(x + ax * s + ox * d, y, z + az * s + oz * d);
+  const body = add(new THREE.BoxGeometry(L, hM, D), sideMat, x + ax * mid + ox * (D / 2 + 0.2), hM / 2, z + az * mid + oz * (D / 2 + 0.2), { noCast: true }); body.rotation.y = rotY;
+  const n = Math.max(1, Math.round(L / 6.5)), seg = L / n, roofs = ["dark", "dark", "red", "slate"];
+  for (let i = 0; i < n; i++) {
+    const a = s0 + i * seg, b = a + seg, top = hM + 2.2 + rnd6() * 1.6, mat = ROOF[roofs[Math.floor(rnd6() * 4)]], rd = 0.2 + D / 2;
+    const q = (m, p0, p1, p2, p3) => { quad(m, p0, p1, p2, p3).castShadow = false; };
+    q(mat, V(a, 0.2, hM + 0.2), V(b, 0.2, hM + 0.2), V(b, rd, top), V(a, rd, top));
+    q(mat, V(b, D + 0.2, hM), V(a, D + 0.2, hM), V(a, rd, top), V(b, rd, top));
+    for (const e of [a, b]) {                                // the gable between two roofs of different heights, seen from either side
+      q(sideMat, V(e, 0.2, hM), V(e, D + 0.2, hM), V(e, rd, top), V(e, rd, top));
+      q(sideMat, V(e, D + 0.2, hM), V(e, 0.2, hM), V(e, rd, top), V(e, rd, top));
+    }
+    if (rnd6() < 0.45) { const c = V(a + seg * (0.25 + rnd6() * 0.5), rd + (rnd6() < 0.5 ? -1 : 1) * 1.2, top); add(new THREE.BoxGeometry(0.6, 1.6, 0.6), chimMat, c.x, top - 0.1, c.z, { noCast: true }); }
+  }
+}
 function wallBox(x, z, len, hM, rotY, o) {                   // a house wall facing +z before rotation, 0.4 m thick
+  wallMass(x, z, len, hM, rotY);
   const t = wallTex(len, hM, o.litP, o), mat = std({ map: t.map, emissiveMap: t.glow, emissive: 0xffffff, emissiveIntensity: 1.1 });
   const m = add(new THREE.BoxGeometry(len, hM, 0.4), [sideMat, sideMat, sideMat, sideMat, mat, sideMat], x, hM / 2, z);
   m.rotation.y = rotY;
@@ -629,6 +669,7 @@ function tramStreet(b, bridge) {
   const tram = makeTram(); target.add(tram);
   const onDeck = (z) => (z > 9 && z < 19.4 ? bridge.deck(z) : 0);
   const SPEED = 3.2, WAIT = 8, CYCLE = 96;
+  let tramT = null, tramLast = 0, tramK = 1, rang = false;   // its own clock: it runs slower or stops when it must brake for you (2026-11-02, he asked)
   const legs = (zA, zB, zStop, t) => {                       // from zA to zB, stopping at zStop; returns z, or null when done
     const d1 = Math.abs(zStop - zA) / SPEED, d2 = Math.abs(zB - zStop) / SPEED;
     if (t < d1) return zA + (zStop - zA) * t / d1;
@@ -637,11 +678,17 @@ function tramStreet(b, bridge) {
     return null;
   };
   critters.push((t) => {                                     // from the T-junction down to us (stopping), and later back up and round the corner
-    const c = t % CYCLE;
+    const dtt = t - tramLast; tramLast = t;
+    if (tramT === null || Math.abs(dtt) > 1) tramT = t; else tramT += dtt * tramK;
+    const c = tramT % CYCLE;
     let z = null, dir = 1;
     if (c < CYCLE / 2) z = legs(zEnd - 6, 42, STOP + TRAM_LEN / 2, c); else { z = legs(42, zEnd - 6, STOP - TRAM_LEN / 2, c - CYCLE / 2); dir = -1; }
-    if (z === null) { tram.visible = false; return; }
+    if (z === null) { tram.visible = false; tramNow.on = false; tramK = 1; return; }
     tram.visible = true; tram.rotation.y = dir > 0 ? 0 : Math.PI;
+    Object.assign(tramNow, { on: true, x: b.group.position.x + (dir > 0 ? -TRAM_TRACK : TRAM_TRACK), z0: z - TRAM_LEN / 2, z1: z + TRAM_LEN / 2, dir });
+    const halt = tramMustStop();
+    tramK += ((halt ? 0 : 1) - tramK) * Math.min(1, Math.max(0, dtt) * 4);
+    if (halt && !rang) { rang = true; document.dispatchEvent(new CustomEvent("street", { detail: "tram" })); } else if (!halt) rang = false;   // (its bell, sound.js)
     tram.position.set(dir > 0 ? -TRAM_TRACK : TRAM_TRACK, (onDeck(z - TRAM_LEN * 0.3) + onDeck(z + TRAM_LEN * 0.3)) / 2, z);
   });
 }
@@ -702,6 +749,21 @@ const starMat = new THREE.ShaderMaterial({
 });
 const stars = new THREE.Points(starGeo, starMat);
 scene.add(stars);
+/* Stars you earn (2026-11-02, his idea to show study in the town): one for each finished study session on the Skills page.
+   A separate set, a little bigger and warmer than the sky's own, from their own random sequence. Lights stay for applications. */
+let seed7 = 20261103;
+const rnd7 = () => ((seed7 = (seed7 * 16807) % 2147483647) - 1) / 2147483646;
+const STUDY_MAX = 400, studyPos = [], studyPhase = [];
+for (let i = 0; i < STUDY_MAX; i++) { const a = -0.12 * Math.PI - rnd7() * 0.76 * Math.PI, e = 0.06 + rnd7() * 0.62, d = 470; studyPos.push(Math.cos(a) * Math.cos(e) * d, Math.sin(e) * d, Math.sin(a) * Math.cos(e) * d); studyPhase.push(rnd7() * 6.28); }
+const studyGeo = new THREE.BufferGeometry(); studyGeo.setAttribute("position", new THREE.Float32BufferAttribute(studyPos, 3)); studyGeo.setAttribute("phase", new THREE.Float32BufferAttribute(studyPhase, 1));
+studyGeo.setDrawRange(0, 0);
+const studyMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, fog: false, uniforms: { time: { value: 0 } },
+  vertexShader: `attribute float phase; uniform float time; varying float vA; void main(){ vA = 0.72 + 0.28 * sin(time * 0.5 + phase * 7.0); gl_PointSize = 3.0; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `varying float vA; void main(){ gl_FragColor = vec4(vec3(1.0,0.93,0.78) * vA, 1.0); }`
+});
+const studyStars = new THREE.Points(studyGeo, studyMat); studyStars.frustumCulled = false;
+scene.add(studyStars);
 
 // light: little fill (Octopath's drama is contrast), the moon low from the right; it follows the camera in steps
 const hemiLight = new THREE.HemisphereLight(0x4a5c98, 0x141220, 0.32);   // the night sky's cold fill (cold night since 2026-10-28, his request)

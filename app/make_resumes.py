@@ -42,8 +42,11 @@ def master():
     return path
 
 
-def stem(what):
-    return person.file_stem(person.load()["name"], what)
+def stem(what, addr=None):
+    name = person.load()["name"]
+    if addr and addr.get("drop_first") and " " in name:          # the same person, another address: the file name says which, not a city
+        name = name.split(" ", 1)[1]
+    return person.file_stem(name, what)
 
 NS = {
     "text": "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
@@ -323,7 +326,7 @@ def render_letter(content, outdir):
         with open(SIGNATURE, "rb") as f:
             extra["Pictures/signature.png"] = f.read()
         content["signature_size"] = png_size(extra["Pictures/signature.png"])
-    return render(content, outdir, build_letter, stem("Cover_Letter"), extra)
+    return render_all(content, outdir, build_letter, "Cover_Letter", extra)
 
 
 def render(content, outdir, builder=None, name=None, extra=None):
@@ -343,8 +346,8 @@ def render(content, outdir, builder=None, name=None, extra=None):
                     b' <manifest:file-entry manifest:full-path="%s" manifest:media-type="image/png"/>\n' % k.encode() for k in extra) + b"</manifest:manifest>")
             comp = zipfile.ZIP_STORED if info.filename == "mimetype" else zipfile.ZIP_DEFLATED
             out.writestr(info.filename, data, compress_type=comp)
-        for name, data in (extra or {}).items():
-            out.writestr(name, data, compress_type=zipfile.ZIP_STORED)
+        for pic, data in (extra or {}).items():
+            out.writestr(pic, data, compress_type=zipfile.ZIP_STORED)
     soffice = person.soffice()
     if not soffice:
         raise ValueError("LibreOffice isn't installed (it makes the PDFs): get it from libreoffice.org")
@@ -354,10 +357,36 @@ def render(content, outdir, builder=None, name=None, extra=None):
     return {"pdf": os.path.relpath(pdf, OUT).replace("\\", "/"), "pages": len(pypdf.PdfReader(pdf).pages)}
 
 
+def render_all(content, outdir, builder=None, what="Resume", extra=None):
+    """One file per address the person sends from ("addresses" in data/profile.json; 2026-11-02). The first keeps the
+    full name in its file name; one marked drop_first leaves out the first name, so they can tell which is which while
+    the file an employer sees says nothing about a city. A location typed by hand for this job replaces the first one.
+    Returns the first file's details, plus "versions" (each file and its location)."""
+    addrs = person.load().get("addresses") or []
+    if len(addrs) < 2:
+        return render(content, outdir, builder, stem(what), extra)
+    known = {a["location"] for a in addrs}
+    letter = "sender" in content
+    typed = content["sender"][1] if letter else content.get("location")
+    first, pages, versions = None, 0, []
+    for i, a in enumerate(addrs):
+        c = copy.deepcopy(content)
+        where = typed if i == 0 and typed and typed not in known else a["location"]
+        if letter:
+            c["sender"][1] = where
+        else:
+            c["location"] = where
+        r = render(c, outdir, builder, stem(what, a), extra)
+        pages = max(pages, r["pages"])
+        versions.append({"pdf": r["pdf"], "location": where, "pages": r["pages"]})
+        first = first or r
+    return dict(first, pages=pages, versions=versions)
+
+
 def main():
     lib = load_lib()
     for key, preset in lib["presets"].items():
-        r = render(resolve(lib, preset), os.path.join(OUT, preset["folder"]))
+        r = render_all(resolve(lib, preset), os.path.join(OUT, preset["folder"]))
         print(key, r["pdf"], r["pages"], "page" if r["pages"] == 1 else "PAGES: too long")
 
 

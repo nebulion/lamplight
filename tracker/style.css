@@ -286,13 +286,10 @@ body.street-open .scene [data-k].on{cursor:pointer}
 .rb-posting textarea{display:block;width:100%;margin-top:8px;background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:3px;padding:8px;font-size:14.5px}
 .rb-row{position:sticky;top:0;z-index:4;display:flex;flex-wrap:wrap;gap:4px 18px;margin:18px 0 0;padding:10px 0;list-style:none;background:var(--bg);border-bottom:1px solid var(--rule);font-size:14px}
 .rb-row li{margin:0}
-.rb-row a,.toc a{color:var(--faint);text-decoration:none}
-.rb-row a:hover,.toc a:hover{color:var(--ink)}
-.rb-row a.off,.toc a.off{opacity:.6}
-.rb-row a.here,.toc a.here{color:var(--lamp)}
-.menu .toc{list-style:none;margin:0 0 4px;padding:0 0 0 12px;border-left:1px solid var(--rule)}
-.menu .toc li{margin:0}
-.menu .toc a{display:block;padding:2px 0;font-size:14px}
+.rb-row a{color:var(--faint);text-decoration:none}
+.rb-row a:hover{color:var(--ink)}
+.rb-row a.off{opacity:.6}
+.rb-row a.here{color:var(--lamp)}
 .rb-e{margin:26px 0 0;padding-top:14px;border-top:1px solid var(--rule);scroll-margin-top:60px}
 .rb-e:first-child{border-top:0}
 .rb-e:not(.on) .rb-eh b{color:var(--muted)}
@@ -386,12 +383,13 @@ body.modal-open{overflow:hidden}
 body.street-open .rail .street-cap{opacity:0 !important}
 
 /* ---------------- your character (D43) ---------------- */
-.ch-wrap{display:grid;grid-template-columns:1fr;gap:32px;align-items:start;margin-top:28px}
-@media (min-width:1280px){.ch-wrap{grid-template-columns:auto minmax(0,1fr);gap:44px}.ch-views{position:sticky;top:40px}}
-.ch-views{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
-.ch-stage{width:min(480px,100%);aspect-ratio:4/5;background:#05070c;overflow:hidden}
+.ch-wrap{display:grid;grid-template-columns:150px minmax(0,1fr);gap:40px;align-items:start;margin-top:28px}
+.ch-views{position:sticky;top:40px}
+@media (max-width:640px){.ch-wrap{grid-template-columns:1fr}.ch-views{position:static;flex-direction:row;align-items:flex-end}}
+.ch-views{display:flex;flex-direction:column;gap:8px;align-items:center}
 .ch-cap{margin:4px 0 0;color:var(--muted)}
-.ch-sprite{width:min(336px,100%);height:auto;image-rendering:pixelated}
+.ch-sprite{width:140px;height:auto;image-rendering:pixelated}
+.ch-walk{width:112px;height:auto;image-rendering:pixelated;opacity:.85}
 .ch-h{font:500 22px/1.2 var(--serif);margin:0 0 12px}
 .ch-h:not(:first-child){margin-top:32px}
 .ch-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:4px 8px}
@@ -438,7 +436,7 @@ body.rail-menu .street-tile,body.rail-menu .street-cap{display:none!important}
 .iv-q{padding:14px 0;border-top:1px solid var(--rule-soft)}
 .iv-label{margin:0 0 8px;color:var(--ink)}
 .iv-opts{display:flex;flex-wrap:wrap;gap:4px 10px}
-.iv-text{width:100%;background:#14110d;border:1px solid var(--rule);padding:8px 10px;border-radius:3px}
+.iv-text{display:block;width:100%;background:#14110d;border:1px solid var(--rule);padding:8px 10px;border-radius:3px;resize:none;overflow:hidden;line-height:1.45}
 .iv-grid{border-collapse:collapse}
 .iv-grid th{text-align:left;font-weight:400;color:var(--muted);padding:3px 14px 3px 0;font-size:15px}
 .iv-grid td{padding:2px 4px}
@@ -447,3 +445,108 @@ body.rail-menu .street-tile,body.rail-menu .street-cap{display:none!important}
 /* ---------------- find jobs with Claude, job-alert emails (finder.js) ---------------- */
 .fd-paste{min-height:64px;max-height:140px;overflow:hidden;background:#14110d;border:1px dashed var(--rule);padding:12px;border-radius:3px;color:var(--faint);font-size:15px;max-width:36rem}
 .fd-paste:focus{color:var(--muted)}
+
+/* ---------------- Today: what you'll need, then the buttons (2026-10-28) ---------------- */
+.need{margin:0 0 26px;padding:12px 0 2px;border-top:1px solid var(--rule-soft);border-bottom:1px solid var(--rule-soft)}
+.need-h{margin:0 0 8px;font-size:13.5px;color:var(--faint)}
+.need .resume{margin:0 0 10px}
+.opened{margin:0 0 12px;font-size:15px;color:var(--lamp)}
+.notthis{margin:14px 0 0;font-size:14.5px;color:var(--faint)}
+.notthis .quiet{font-size:14.5px}
+.keys{display:block;margin-top:6px;font-size:13px;color:var(--faint)}
+@media (hover:none){.keys{display:none}}
+
+/* ---------------- sending one: today's bulbs and the moment (2026-10-28) ---------------- */
+.bulbs{display:flex;gap:12px;margin:2px 0 14px;padding-top:4px;background:linear-gradient(var(--rule),var(--rule)) 0 3px/100% 1px no-repeat;width:max-content}
+.bulb{width:9px;height:13px;border-radius:45% 45% 50% 50%;background:#2a241e;border:1px solid #3a3129;margin-top:-1px}
+.bulb.on{background:var(--lamp);border-color:#c98a3a}
+.bulb.extra{width:7px;height:10px}
+.moment{display:grid;grid-template-columns:auto minmax(0,1fr);gap:32px;align-items:center;margin:8px 0 10px}
+.moment-cv{height:min(340px,46vh);width:auto;image-rendering:pixelated}
+.moment-big{font:500 34px/1.15 var(--serif);margin:0 0 8px}
+.moment-of{color:var(--faint);font-size:22px}
+.moment-job{margin:0 0 16px;color:var(--muted)}
+.moment-mile{margin:0 0 16px;color:var(--lamp)}
+.moment-next{margin:0 0 18px;font-size:15px;color:var(--muted)}
+.moment-next b{color:var(--ink);font-weight:600}
+@media (max-width:700px){.moment{grid-template-columns:1fr}.moment-cv{height:240px}}
+
+/* ---------------- the sidebar's arrow and the sound icons (2026-10-28) ---------------- */
+.site{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rail-arrow{display:inline-grid;place-items:center;width:26px;height:26px;color:var(--faint);border-radius:3px}
+.rail-arrow:hover{color:var(--ink);background:#1a1613}
+.sound-ctl{flex-direction:row;gap:10px;align-items:center}
+.icon-btn{display:inline-grid;place-items:center;width:28px;height:26px;padding:0!important;color:var(--faint);border-radius:3px}
+.icon-btn:hover{color:var(--ink);background:#1a1613}
+.icon-btn[aria-pressed="true"]{color:var(--muted)}
+.street-sound{display:inline-grid;place-items:center}
+
+/* ---------------- job facts as small bars (2026-10-28) ---------------- */
+.meters{display:flex;flex-wrap:wrap;gap:8px 18px;margin:-6px 0 18px}
+.meter{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;color:var(--muted)}
+.m-b{display:inline-flex;gap:2px}
+.m-b i{width:9px;height:9px;background:#2a241e;border:1px solid #3a3129}
+.m-b i.on{background:var(--lamp);border-color:#c98a3a}
+.meter.urgent .m-b i.on{background:var(--brick);border-color:#a8503a}
+.meters.mini{display:inline-flex;gap:4px 12px;margin:0;vertical-align:middle}
+.meters.mini .meter{font-size:12.5px;gap:5px}
+.meters.mini .m-b i{width:6px;height:7px}
+
+/* ---------------- the site's own dialogs: drawn like the right-click menu (2026-11-02) ---------------- */
+.askback{position:fixed;inset:0;z-index:70}
+.askbox{position:fixed;width:min(360px,calc(100vw - 16px));padding:12px 14px 14px;background:#17130f;border:1px solid #3a3129;border-radius:3px;font-size:14.5px;color:var(--ink)}
+.ask-t{margin:0 0 8px;font:500 17px/1.25 var(--serif)}
+.ask-n{margin:0 0 10px;font-size:13.5px;color:var(--muted)}
+.ask-in{width:100%;margin:0 0 12px;padding:5px 2px;background:transparent;border:0;border-bottom:1px solid #3a3129;color:var(--ink);font-size:15px}
+.ask-in:focus{border-color:var(--lamp);outline:none}
+.ask-b{display:flex;gap:10px}
+.ask-b .btn{padding:6px 14px;font-size:14.5px}
+
+/* ---------------- Jobs: filters, reading a row, Up next, Sent by day (2026-11-02) ---------------- */
+.menu .new{flex:none;align-self:center;width:6px;height:6px;margin:0 auto 0 8px;background:var(--lamp)}   /* a small square dot: the Inbox has something */
+.menu .new:hover{background:var(--lamp-hover)}
+.filters{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;margin:-4px 0 18px;font-size:14.5px}
+.filters button{display:inline-flex;align-items:baseline;gap:6px;padding:2px 0;color:var(--muted);border-bottom:1px solid transparent}
+.filters button svg{align-self:center;color:var(--faint)}
+.filters button:hover{color:var(--ink)}
+.filters button.on{color:var(--ink);border-bottom-color:var(--lamp)}
+.filters button b{font-weight:400;color:var(--lamp)}
+.filters .clear{color:var(--faint);text-decoration:underline;text-underline-offset:3px}
+#j-inbox-bar{margin:0 0 14px}
+.job .upbtn{flex:none;font-size:13.5px;opacity:0}
+.job:hover .upbtn,.job.cur .upbtn,.job .upbtn:focus-visible{opacity:1}
+.job .l3{margin:8px 0 2px;font-size:15px;user-select:text;cursor:auto}
+.job .l3 .why{margin:0 0 6px}
+.job .l3 .note{margin:0 0 6px;font-size:14px;color:var(--muted)}
+.job .l3 .actions{margin-top:10px}
+.job[draggable="true"]{cursor:grab}
+.job.dragging{opacity:.45}
+.job.dropline{box-shadow:0 -2px 0 var(--lamp)}
+.dayhead{padding:18px 8px 6px;border-bottom:1px solid var(--rule);font-size:14px;color:var(--muted)}
+.dayhead b{font-weight:600;color:var(--lamp)}
+.board tr.un td:first-child{box-shadow:inset 2px 0 0 var(--lamp);padding-left:8px}
+@media (hover:none){.job .upbtn{opacity:1}}
+
+/* ---------------- Skills (2026-11-02) ---------------- */
+.sk-plan{margin:26px 0 8px;padding:0 0 18px;border-bottom:1px solid var(--rule)}
+.sk-plan h2{margin:0 0 6px}
+.sk-big{margin:0 0 8px}
+.sk-big b{font:500 26px/1 var(--serif);color:var(--lamp)}
+.sk-bar{display:flex;flex-wrap:wrap;gap:3px;margin:0 0 12px}
+.sk-bar i{width:11px;height:13px;background:#2a241e;border:1px solid #3a3129}
+.sk-bar i.on{background:var(--lamp);border-color:#c98a3a}
+.sk-next{margin:0 0 4px;font-size:15px;color:var(--muted)}
+.sk-tasks{margin:0 0 10px;padding-left:20px;font-size:15px}
+.sk-tasks li.done{color:var(--faint);text-decoration:line-through}
+.sk-item{padding:12px 0 13px;border-bottom:1px solid var(--rule)}
+.sk-item.done .sk-name{color:var(--lamp)}
+.sk-l1{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
+.sk-name{font:500 19px/1.3 var(--serif)}
+.sk-item .reply{background:var(--bg);border:0;border-bottom:1px solid var(--rule);color:var(--ink);font-size:14px;padding:1px 2px}
+.sk-meta{margin:2px 0 4px;font-size:14px;color:var(--muted)}
+.sk-meta .dot{color:var(--faint)}
+.sk-meta .quiet{font-size:14px}
+.sk-why{margin:0 0 3px;font-size:15px}
+.sk-why b{font-weight:600}
+.sk-step{margin:0;font-size:14px;color:var(--muted)}
+

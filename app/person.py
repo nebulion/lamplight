@@ -22,6 +22,8 @@ DEFAULTS = {
     "cities": [],
     "hours": [],
     "stretch": True,
+    "study_plans": [],        # Markdown plans the Skills page reads: [{"id", "name", "file"}]
+    "addresses": [],          # where they send from: [{"location", "metro" (jobs there use this one), "drop_first" (file name without the first name)}]
     "character": None,        # the townsperson in the street (D43): person() options, checked by clean_character()
 }
 

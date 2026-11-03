@@ -27,12 +27,13 @@ JOB_FIELDS = {
     "email_used", "resume_file", "resume_spec",   # resume_*: the custom resume made for this job in the builder
     "cover_letter", "cover_file", "cover_spec",   # cover_letter: the posting asks for one; cover_*: the letter made in the builder
     "want",                                       # how much they want it (ideal / good / fallback), from their scan (D42)
+    "hours",                                      # full-time / part-time / seasonal / temporary (the Hours filter)
 }
 WANTS = {"ideal", "good", "fallback"}
 # a new person's empty tracker (the first-run page fills in the settings)
 EMPTY = {
     "version": 1,
-    "settings": {"daily_target": 5, "daily_floor": 1, "jobs_target": 100, "everyday_target": 0,
+    "settings": {"daily_target": 5, "daily_floor": 1,
                  "email": "", "cue": "", "intention": "", "identity": ""},
     "resumes": {}, "jobs": [], "votes": [], "events": [],
 }

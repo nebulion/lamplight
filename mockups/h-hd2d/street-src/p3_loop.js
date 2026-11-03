@@ -323,7 +323,9 @@ function update(now) {
     moonGrp.position.copy(camera.position).addScaledVector(_v, 420); moonGrp.quaternion.copy(camera.quaternion);
     moonGrp.scale.setScalar(Math.max(10, FR.rect.h * 0.034) * 420 / fpx);
   }
-  water.material.uniforms.time.value = t; starMat.uniforms.time.value = t; grade.uniforms.time.value = t;
+  water.material.uniforms.time.value = t; starMat.uniforms.time.value = t; studyMat.uniforms.time.value = t; grade.uniforms.time.value = t;
+  behindGround.position.x = camX;
+  TOWERS.forEach((w) => { w.v += (w.goal - w.v) * Math.min(1, dt * 1.2); w.mat.opacity = w.v * 0.3 * FR.light; w.wash.visible = w.mat.opacity > 0.003; });
   stepLights(dt);
   updateLamps(t);
   for (let i = 0; i < MOTES; i++) {
@@ -334,13 +336,19 @@ function update(now) {
   }
   moteGeo.attributes.position.needsUpdate = true;
   billboards.forEach((m) => { if (!m.parent || m.parent.visible !== false) faceAt(m, m.position.x + parentX(m)); });
+  nearThings(cx);
   people.forEach((p) => {
     if (p.speed) {
-      p.x += p.speed * dt;
+      const pd = Math.sign(p.speed);
+      p.go += ((mustWait(p.x, pd, p.zNow, 16) ? 0 : 1) - p.go) * Math.min(1, dt * 5);   // waits at the kerb for the tram
+      p.x += p.speed * p.go * dt;
       if (p.x - cx > 48) p.x -= 96; if (p.x - cx < -48) p.x += 96;
-      p.mesh.position.x = p.shadow.position.x = p.x;
-      p.t.offset.x = (1 + Math.floor((t + p.phase) * 4) % 2) / 3;
-      p.mesh.position.y = PH / 2 + Math.abs(Math.sin((t + p.phase) * 6.3)) * 0.03;
+      if (p.z < 10) p.zNow += (clearZ(p.x, pd, p.z, 0.42, p) - p.zNow) * Math.min(1, dt * 3.2);   // steps round whatever's in the way
+      p.mesh.position.x = p.shadow.position.x = p.x; p.mesh.position.z = p.shadow.position.z = p.zNow;
+      const stepping = p.go > 0.25;
+      p.t.offset.x = stepping ? (1 + Math.floor((t + p.phase) * 4) % 2) / 3 : 0;
+      p.mesh.position.y = PH / 2 + (stepping ? Math.abs(Math.sin((t + p.phase) * 6.3)) * 0.03 : 0);
+      if (p.dogMesh) p.dogMesh.position.z = p.zNow + 0.35;
     } else if (p.talk) p.t.offset.x = (Math.floor((t + p.phase) * 0.9) % 3 === 0 ? 1 : 0) / 3;
     else if (p.broom) { const sw = Math.sin((t + p.phase) * 0.35); p.mesh.position.x = p.shadow.position.x = p.home + sw * 1.2; p.t.offset.x = (1 + Math.floor((t + p.phase) * 2.2) % 2) / 3; }
     faceAt(p.mesh, p.mesh.position.x + parentX(p.mesh));
@@ -351,8 +359,11 @@ function update(now) {
   });
   stepHero(dt, t);
   critters.forEach((c) => c(t));
-  cycl.x += cycl.speed * dt; if (cycl.x - cx > 50) cycl.x -= 100;
-  cycBike.position.x = cycl.x; cycRider.position.x = cycl.x - 0.2; cycShadow.position.set(cycl.x, 0.02, cycl.z);
+  cycl.go += ((mustWait(cycl.x, 1, cycl.z, 10) ? 0 : 1) - cycl.go) * Math.min(1, dt * 3);   // brakes for the tram too
+  cycl.x += cycl.speed * cycl.go * dt; if (cycl.x - cx > 50) cycl.x -= 100;
+  cycl.z += (clearZ(cycl.x, 1, 6.4, 0.55, cycl) - cycl.z) * Math.min(1, dt * 2.5);
+  cycl.f += dt * 9 * cycl.go; cycPedal.offset.x = cycBikeTex.offset.x = (Math.floor(cycl.f) % 4) / 4;   // pedalling, wheels turning
+  cycBike.position.x = cycl.x; cycRider.position.x = cycl.x - 0.2; cycBike.position.z = cycl.z - 0.06; cycRider.position.z = cycl.z; cycShadow.position.set(cycl.x, 0.02, cycl.z);
   faceAt(cycBike, cycl.x); faceAt(cycRider, cycl.x - 0.2);
   // shadows are redrawn only when a light moved (at most four times a second)
   if (frameNo++ < 3 || (shadowDirty && now - lastShadow > 250)) { renderer.shadowMap.needsUpdate = true; shadowDirty = false; lastShadow = now; }
@@ -488,6 +499,7 @@ export const Street = {
     return { x: best.cx, W: f.W, H: f.H, day: f.map.image, lit: f.litMap.image, glow: f.emissive.image,
       windows: f.holes.filter((h) => h.lid).map((h) => ({ x: h.x, y: h.y, w: h.w, h: h.h, k: KOF[h.lid] })),
       door: (f.holes.filter((h) => h.kind === "door").map((h) => ({ x: h.x, y: h.y, w: h.w, h: h.h })))[0] || null,   // where your character goes in (D43)
+      stoep: !!best.H.s.stoop,                               // a raised entrance with steps up from both sides (the picture draws them too)
       roof: Object.assign({}, best.H.roof, { tiles: ROOF[best.H.roof.kind].map.image, eave: best.H.eave }),
       look: { fill: FLAT_FILL, exposure: renderer.toneMappingExposure } };   // how the 3D view shows it at the start (the picture copies it)   // metres from the ground; the picture's px = metres * 16
   },
@@ -515,7 +527,15 @@ export const Street = {
     litTex.needsUpdate = true; heroGo(lids); return lids.length;
   },
   finish() { endJob(true); },                                // skip: every light still to do comes on now
-  errands: () => hero.queue.length + (hero.job ? 1 : 0),
+  errands: () => hero.queue.length + (hero.job && hero.job.kind !== "exit" ? 1 : 0),   // (stepping out of the door isn't a light: it used to count as one more)
+  setStudy(nStars, nTowers) {                                // the Skills page: stars for finished study sessions, floodlit towers for certificates passed
+    studyGeo.setDrawRange(0, Math.max(0, Math.min(STUDY_MAX, nStars | 0)));
+    TOWERS.forEach((w, i) => { w.goal = i < (nTowers | 0) ? 1 : 0; });
+  },
+  agents() {                                                 // test pages: where everyone is, to check nothing passes through anything
+    return { hero: { x: hero.x, y: hero.y, z: hero.z, inside: hero.inside, riding: hero.riding }, cyclist: { x: cycl.x, z: cycl.z, go: cycl.go }, tram: Object.assign({}, tramNow),
+      walkers: people.filter((p) => p.speed).map((p) => ({ x: p.x, z: p.zNow, go: p.go })), obstacles: obstNear };
+  },
   get x() { return camX; }, get loop() { return LOOP; },
   setTime(t) { T = t; },                                     // test pages: jump the scene clock (where the tram is)
   step(n = 1) { for (let i = 0; i < n; i++) { const now = performance.now(); last = now - 40; update(now); } },   // test pages: advance frames by hand (hidden windows don't animate)

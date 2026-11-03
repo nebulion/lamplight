@@ -1156,7 +1156,8 @@ function buildHouse(s, hx, i, edge) {
   const outer = target;
   if (s.lean) {                                              // the dancing houses lean sideways and forward ("op vlucht"), each its own way
     const pv = new THREE.Group(), inner = new THREE.Group();
-    pv.position.set(hx + w / 2, 0, zOff); pv.rotation.set(s.lean[1], 0, s.lean[0]);
+    const fit = s.leanFit || 1;                              // the last of the row is a touch narrower, so its top clears the upright house beside it
+    pv.position.set(hx + w / 2 * fit, 0, zOff); pv.rotation.set(s.lean[1], 0, s.lean[0]); pv.scale.x = fit;
     inner.position.set(-(hx + w / 2), 0, -zOff); pv.add(inner); target.add(pv); target = inner;
   }
   buildFacade(f, s, hx, zOff, lidMat(std({ map: f.map, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 1.25 }), f.litMap));
@@ -1233,20 +1234,24 @@ function genHouse(o = {}) {
   return s;
 }
 const dancing = (k) => genHouse({ w: +(4.1 + rnd() * 0.6).toFixed(1), eave: +(11 + rnd() * 1.6).toFixed(1), gable: pick(["bell", "neck", "step", "spout"]),
-  lean: [(k % 2 ? 1 : -1) * (0.02 + rnd() * 0.02), 0.012 + rnd() * 0.01], pilasters: false, balcony: 0 });
+  lean: [(rnd(), -(0.012 + k * 0.003)), 0.012 + rnd() * 0.01], leanFit: k === 4 ? 0.93 : 1, pilasters: false, balcony: 0 });   // (2026-11-02: they used to lean toward each other and cut through; the rnd() keeps every later draw in place)
 
 // ================================================================== shared props
 const ironMat = std({ color: 0x16140f });
+/* What people walk around on the quay (2026-11-02, he asked: things can't pass through each other). Rectangles, block-local. */
+const OBST = [];
+function obst(x0, x1, z0, z1) { if (curBlock && z1 > 1 && z0 < 9) OBST.push({ b: curBlock, x0, x1, z0, z1 }); }
 const bikeMat = std({ map: bikeTex, alphaTest: 0.5, side: THREE.DoubleSide });
-function bikes(x, n, z = 7.2) { for (let k = 0; k < n; k++) { const b = add(new THREE.PlaneGeometry(2.5, 1.5), bikeMat, x + k * 0.55, 0.75, z + (k % 2) * 0.1); b.rotation.y = 1.25; } }
+function bikes(x, n, z = 7.2) { obst(x - 1.3, x + (n - 1) * 0.55 + 1.3, z - 0.3, z + 0.6); for (let k = 0; k < n; k++) { const b = add(new THREE.PlaneGeometry(2.5, 1.5), bikeMat, x + k * 0.55, 0.75, z + (k % 2) * 0.1); b.rotation.y = 1.25; } }
 const barrelMat = std({ map: woodTex("#6a4a2c") });
-function barrel(x, z) { add(new THREE.CylinderGeometry(0.34, 0.34, 0.85, 10), barrelMat, x, 0.43, z); }
+function barrel(x, z) { obst(x - 0.36, x + 0.36, z - 0.36, z + 0.36); add(new THREE.CylinderGeometry(0.34, 0.34, 0.85, 10), barrelMat, x, 0.43, z); }
 const crateMat = std({ map: crateTex });
-function crate(x, z, y, top) { const m = top ? [crateMat, crateMat, std({ map: top }), crateMat, crateMat, crateMat] : crateMat; add(new THREE.BoxGeometry(0.7, 0.7, 0.7), m, x, (y || 0) + 0.35, z); }
+function crate(x, z, y, top) { obst(x - 0.4, x + 0.4, z - 0.4, z + 0.4); const m = top ? [crateMat, crateMat, std({ map: top }), crateMat, crateMat, crateMat] : crateMat; add(new THREE.BoxGeometry(0.7, 0.7, 0.7), m, x, (y || 0) + 0.35, z); }
 const planterBoxMat = std({ map: woodTex("#3a2a1c") }), bushMat = std({ map: bushTex, alphaTest: 0.5, side: THREE.DoubleSide });
-function planter(x, z) { add(new THREE.BoxGeometry(0.9, 0.55, 0.9), planterBoxMat, x, 0.28, z); const b = add(new THREE.PlaneGeometry(1.2, 0.72), bushMat, x, 0.85, z); b.rotation.y = 0.2; }
+function planter(x, z) { obst(x - 0.55, x + 0.55, z - 0.55, z + 0.55); add(new THREE.BoxGeometry(0.9, 0.55, 0.9), planterBoxMat, x, 0.28, z); const b = add(new THREE.PlaneGeometry(1.2, 0.72), bushMat, x, 0.85, z); b.rotation.y = 0.2; }
 const benchMat = std({ map: woodTex("#5a3a22") });
 function bench(x, z, back) {                                 // facing the canal
+  obst(x - 1.05, x + 1.05, z - 0.45, z + 0.4);
   add(new THREE.BoxGeometry(2.0, 0.12, 0.6), benchMat, x, 0.5, z); add(new THREE.BoxGeometry(2.0, 0.6, 0.1), benchMat, x, 0.8, z + (back || -0.3));
   for (const dx of [-0.85, 0.85]) add(new THREE.BoxGeometry(0.08, 0.44, 0.55), bracketMat, x + dx, 0.22, z);
 }
@@ -1276,6 +1281,7 @@ function houseExtras(b) {                                    // hollyhocks again
 
 // ------------------------------------------------------------------ lamps: each one a light of its own
 function lamp(x, z, near) {
+  obst(x - 0.18, x + 0.18, z - 0.18, z + 0.18);
   const lid = newLid("lamp");
   const g = new THREE.Group(), postH = (LAMP_H - LAMP_HEAD) / PX, headH = LAMP_HEAD / PX;
   const post = new THREE.Mesh(new THREE.PlaneGeometry(1, postH), std({ map: lampArt.post.map, alphaTest: 0.5, side: THREE.DoubleSide }));
@@ -1583,7 +1589,8 @@ function addPerson(opts) {
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 12), shadowMat);
   shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1, 0.55, 1); shadow.position.set(opts.x, 0.02 + (opts.y || 0), opts.z); parent.add(shadow);
   if (opts.dog) { opts.dogMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.62), std({ map: dogTex.clone(), alphaTest: 0.5, side: THREE.DoubleSide })); opts.dogMesh.position.set(opts.x + 1, 0.31, opts.z + 0.35); opts.dogMesh.material.map.needsUpdate = true; scene.add(opts.dogMesh); }
-  people.push(Object.assign({ mesh, shadow, t, phase: rnd() * 10, home: opts.x }, opts));
+  if (!walker) obst(opts.x - 0.35, opts.x + 0.35, opts.z - 0.3, opts.z + 0.3);   // someone standing: walkers go round them
+  people.push(Object.assign({ mesh, shadow, t, phase: rnd() * 10, home: opts.x, zNow: opts.z, go: 1 }, opts));
 }
 function walkers() {                                         // they walk around wherever the camera is
   const W = [
@@ -1597,12 +1604,14 @@ function walkers() {                                         // they walk around
   ];
   W.forEach((o, k) => addPerson(Object.assign({ x: -40 + k * 13 + rnd() * 6 }, o)));
 }
-const cycl = { x: -30, z: 6.4, speed: 4.2 };
-let cycBike, cycRider, cycShadow;
+const cycl = { x: -30, z: 6.4, speed: 4.2, go: 1, f: 0 };
+let cycBike, cycRider, cycShadow, cycBikeTex, cycPedal;
 function cyclist() {
-  cycBike = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.5), bikeMat); cycBike.position.set(0, 0.75, cycl.z);
-  cycRider = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), std({ map: person({ coat: "#4a5a3a", scarf: "#c86a3a", hairStyle: "short", hair: "#5a3a1e" }), alphaTest: 0.5, side: THREE.DoubleSide }));
-  cycRider.position.set(0, 1.75, cycl.z);
+  cycBikeTex = bikeSheet(["#141312", "#1e1c1a", "#3a3836", "#8a8a84"], "#3c5a74", "#1d1a17", "#2a2a2a", ["#6d4a2a", "#8a5e34"]);
+  cycBike = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.5), std({ map: cycBikeTex, alphaTest: 0.5, side: THREE.DoubleSide })); cycBike.position.set(0, 0.75, cycl.z);
+  cycPedal = pedalSheet(person({ coat: "#4a5a3a", scarf: "#c86a3a", hairStyle: "short", hair: "#5a3a1e" }).image, FW, FH, [10, 21], [9.5, 33]);   // same person, seated, pedalling (2026-11-02)
+  cycRider = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), std({ map: cycPedal, alphaTest: 0.5, side: THREE.DoubleSide }));
+  cycRider.position.set(0, PH / 2 + 0.3, cycl.z);
   cycShadow = new THREE.Mesh(new THREE.CircleGeometry(0.9, 12), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.4, depthWrite: false }));
   cycShadow.rotation.x = -Math.PI / 2; cycShadow.scale.set(1.3, 0.35, 1);
   scene.add(cycBike, cycRider, cycShadow);
@@ -1838,9 +1847,14 @@ function buildBack3D(L) {
   }
   flush(Math.min(x, L));
 }
+/* (2026-11-02, he asked: the background shouldn't float) From a raised view you could see past the roofs to bare sky under the
+   next row of houses. The town now has ground: dark earth from behind the front row to the far distance, under everything. */
+const behindGround = new THREE.Mesh(new THREE.PlaneGeometry(1400, 500), std({ color: 0x191b16 }));
+behindGround.rotation.x = -Math.PI / 2; behindGround.position.set(0, -0.03, -251.5); behindGround.receiveShadow = false;
 function buildBackground(L) {
   const seedWas = seed;
   buildBack3D(L);
+  scene.add(behindGround);
   // (a far painted silhouette row was tried and removed: Octopath has nothing like it, he said)
   seed = seedWas;
 }
@@ -1916,6 +1930,7 @@ const towerBlue = std({ color: 0x33507a }), towerGold = std({ color: 0xa8894a })
 const clockTex = sprite(16, 16, (g) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - 7.5, y - 7.5); if (d < 7.5) P(g, x, y, d > 6.4 ? "#c8a050" : "#e8dcc0"); } R(g, 7, 3, 2, 5, "#1a1c24"); R(g, 7, 7, 4, 2, "#1a1c24"); });
 const clockMat = std({ map: clockTex, emissiveMap: clockTex, emissive: 0xffffff, emissiveIntensity: 0.5, alphaTest: 0.5 });   // the clock faces are lit at night
 [towerBrick, towerStone, towerBlue, towerGold, towerGreen, towerSlate, clockMat].forEach((m) => { m.fog = false; });   // the towers stand out of the haze, lit by the moon
+const TOWERS = [];
 function tower3d(kind, tx, tz) {
   /* scaled like a stage set (Octopath shrinks its landmarks): at this low camera the top of the view reaches only ~25 m
      that far back, so each tower is made small enough for its crown to show over the back rows */
@@ -1941,6 +1956,11 @@ function tower3d(kind, tx, tz) {
   } else {                                                   // the Oude Kerk's tower
     box(7, 0, 26, towerBrick); box(5.4, 26, 6, towerStone); clock(29, 5.4, 2.4); oct(2.2, 32, 4.5, towerSlate); cone(1.9, 36.5, 13, towerSlate);
   }
+  /* A floodlight on this tower (2026-11-02): each certificate marked Done on the Skills page lights one. The wash is the same
+     shapes, drawn again in warm light over the tower. Off until then; never tied to applications. */
+  const wash = new THREE.Group(), wmat = new THREE.MeshBasicMaterial({ color: 0xffc07a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  grp.children.slice().forEach((m) => { if (!m.isMesh) return; const c = new THREE.Mesh(m.geometry, wmat); c.position.copy(m.position); c.rotation.copy(m.rotation); c.scale.copy(m.scale).multiplyScalar(1.004); c.castShadow = c.receiveShadow = false; wash.add(c); dynamic.push(c); });
+  wash.visible = false; grp.add(wash); TOWERS.push({ wash, mat: wmat, v: 0, goal: 0 });
   target = outer;
 }
 
@@ -1974,7 +1994,33 @@ function wallTex(len, hM, litP, o = {}) {                    // a painted brick 
 let seed3 = 20261029;
 const rnd2b = () => ((seed3 = (seed3 * 16807) % 2147483647) - 1) / 2147483646;
 const pick2 = (a) => a[Math.floor(rnd2b() * a.length)];
+/* (2026-11-02, he asked: the tram street's buildings looked broken) These walls were thin slabs standing alone, with nothing
+   behind them and no roof. Each now has real houses behind it: a block 6 m deep, split into house widths, each with its own
+   pitched roof and now and then a chimney. Own random sequence, so nothing on the street moves. */
+let seed6 = 20261102;
+const rnd6 = () => ((seed6 = (seed6 * 16807) % 2147483647) - 1) / 2147483646;
+function wallMass(x, z, len, hM, rotY) {
+  const D = 6, ox = -Math.sin(rotY), oz = -Math.cos(rotY), ax = Math.cos(rotY), az = -Math.sin(rotY);   // o: straight back from the wall; a: along it
+  let s0 = -len / 2, s1 = len / 2;
+  if (Math.abs(oz) < 0.5) { if (az > 0) s1 -= 1.2; else s0 += 1.2; }   // walls running back from the quay stop short of the front row's fronts
+  const L = s1 - s0, mid = (s0 + s1) / 2; if (L < 1) return;
+  const V = (s, d, y) => new THREE.Vector3(x + ax * s + ox * d, y, z + az * s + oz * d);
+  const body = add(new THREE.BoxGeometry(L, hM, D), sideMat, x + ax * mid + ox * (D / 2 + 0.2), hM / 2, z + az * mid + oz * (D / 2 + 0.2), { noCast: true }); body.rotation.y = rotY;
+  const n = Math.max(1, Math.round(L / 6.5)), seg = L / n, roofs = ["dark", "dark", "red", "slate"];
+  for (let i = 0; i < n; i++) {
+    const a = s0 + i * seg, b = a + seg, top = hM + 2.2 + rnd6() * 1.6, mat = ROOF[roofs[Math.floor(rnd6() * 4)]], rd = 0.2 + D / 2;
+    const q = (m, p0, p1, p2, p3) => { quad(m, p0, p1, p2, p3).castShadow = false; };
+    q(mat, V(a, 0.2, hM + 0.2), V(b, 0.2, hM + 0.2), V(b, rd, top), V(a, rd, top));
+    q(mat, V(b, D + 0.2, hM), V(a, D + 0.2, hM), V(a, rd, top), V(b, rd, top));
+    for (const e of [a, b]) {                                // the gable between two roofs of different heights, seen from either side
+      q(sideMat, V(e, 0.2, hM), V(e, D + 0.2, hM), V(e, rd, top), V(e, rd, top));
+      q(sideMat, V(e, D + 0.2, hM), V(e, 0.2, hM), V(e, rd, top), V(e, rd, top));
+    }
+    if (rnd6() < 0.45) { const c = V(a + seg * (0.25 + rnd6() * 0.5), rd + (rnd6() < 0.5 ? -1 : 1) * 1.2, top); add(new THREE.BoxGeometry(0.6, 1.6, 0.6), chimMat, c.x, top - 0.1, c.z, { noCast: true }); }
+  }
+}
 function wallBox(x, z, len, hM, rotY, o) {                   // a house wall facing +z before rotation, 0.4 m thick
+  wallMass(x, z, len, hM, rotY);
   const t = wallTex(len, hM, o.litP, o), mat = std({ map: t.map, emissiveMap: t.glow, emissive: 0xffffff, emissiveIntensity: 1.1 });
   const m = add(new THREE.BoxGeometry(len, hM, 0.4), [sideMat, sideMat, sideMat, sideMat, mat, sideMat], x, hM / 2, z);
   m.rotation.y = rotY;
@@ -2138,6 +2184,7 @@ function tramStreet(b, bridge) {
   const tram = makeTram(); target.add(tram);
   const onDeck = (z) => (z > 9 && z < 19.4 ? bridge.deck(z) : 0);
   const SPEED = 3.2, WAIT = 8, CYCLE = 96;
+  let tramT = null, tramLast = 0, tramK = 1, rang = false;   // its own clock: it runs slower or stops when it must brake for you (2026-11-02, he asked)
   const legs = (zA, zB, zStop, t) => {                       // from zA to zB, stopping at zStop; returns z, or null when done
     const d1 = Math.abs(zStop - zA) / SPEED, d2 = Math.abs(zB - zStop) / SPEED;
     if (t < d1) return zA + (zStop - zA) * t / d1;
@@ -2146,11 +2193,17 @@ function tramStreet(b, bridge) {
     return null;
   };
   critters.push((t) => {                                     // from the T-junction down to us (stopping), and later back up and round the corner
-    const c = t % CYCLE;
+    const dtt = t - tramLast; tramLast = t;
+    if (tramT === null || Math.abs(dtt) > 1) tramT = t; else tramT += dtt * tramK;
+    const c = tramT % CYCLE;
     let z = null, dir = 1;
     if (c < CYCLE / 2) z = legs(zEnd - 6, 42, STOP + TRAM_LEN / 2, c); else { z = legs(42, zEnd - 6, STOP - TRAM_LEN / 2, c - CYCLE / 2); dir = -1; }
-    if (z === null) { tram.visible = false; return; }
+    if (z === null) { tram.visible = false; tramNow.on = false; tramK = 1; return; }
     tram.visible = true; tram.rotation.y = dir > 0 ? 0 : Math.PI;
+    Object.assign(tramNow, { on: true, x: b.group.position.x + (dir > 0 ? -TRAM_TRACK : TRAM_TRACK), z0: z - TRAM_LEN / 2, z1: z + TRAM_LEN / 2, dir });
+    const halt = tramMustStop();
+    tramK += ((halt ? 0 : 1) - tramK) * Math.min(1, Math.max(0, dtt) * 4);
+    if (halt && !rang) { rang = true; document.dispatchEvent(new CustomEvent("street", { detail: "tram" })); } else if (!halt) rang = false;   // (its bell, sound.js)
     tram.position.set(dir > 0 ? -TRAM_TRACK : TRAM_TRACK, (onDeck(z - TRAM_LEN * 0.3) + onDeck(z + TRAM_LEN * 0.3)) / 2, z);
   });
 }
@@ -2211,6 +2264,21 @@ const starMat = new THREE.ShaderMaterial({
 });
 const stars = new THREE.Points(starGeo, starMat);
 scene.add(stars);
+/* Stars you earn (2026-11-02, his idea to show study in the town): one for each finished study session on the Skills page.
+   A separate set, a little bigger and warmer than the sky's own, from their own random sequence. Lights stay for applications. */
+let seed7 = 20261103;
+const rnd7 = () => ((seed7 = (seed7 * 16807) % 2147483647) - 1) / 2147483646;
+const STUDY_MAX = 400, studyPos = [], studyPhase = [];
+for (let i = 0; i < STUDY_MAX; i++) { const a = -0.12 * Math.PI - rnd7() * 0.76 * Math.PI, e = 0.06 + rnd7() * 0.62, d = 470; studyPos.push(Math.cos(a) * Math.cos(e) * d, Math.sin(e) * d, Math.sin(a) * Math.cos(e) * d); studyPhase.push(rnd7() * 6.28); }
+const studyGeo = new THREE.BufferGeometry(); studyGeo.setAttribute("position", new THREE.Float32BufferAttribute(studyPos, 3)); studyGeo.setAttribute("phase", new THREE.Float32BufferAttribute(studyPhase, 1));
+studyGeo.setDrawRange(0, 0);
+const studyMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, fog: false, uniforms: { time: { value: 0 } },
+  vertexShader: `attribute float phase; uniform float time; varying float vA; void main(){ vA = 0.72 + 0.28 * sin(time * 0.5 + phase * 7.0); gl_PointSize = 3.0; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `varying float vA; void main(){ gl_FragColor = vec4(vec3(1.0,0.93,0.78) * vA, 1.0); }`
+});
+const studyStars = new THREE.Points(studyGeo, studyMat); studyStars.frustumCulled = false;
+scene.add(studyStars);
 
 // light: little fill (Octopath's drama is contrast), the moon low from the right; it follows the camera in steps
 const hemiLight = new THREE.HemisphereLight(0x4a5c98, 0x141220, 0.32);   // the night sky's cold fill (cold night since 2026-10-28, his request)
@@ -2533,6 +2601,56 @@ function heroSprite(o0) {
   return t;
 }
 
+/* Pedalling (2026-11-02, he asked: their legs didn't move on a bike). Four frames: the rider's top half from their standing
+   frame, legs drawn fresh from hip to pedal, with the colours read off the standing picture. No random draws. hip and bb
+   (the crank's centre) are in the frame's pixels; the pedal turns clockwise on screen, the way a rider facing right pedals. */
+function pedalSheet(src, fw, fh, hip, bb) {
+  const pc = document.createElement("canvas"); pc.width = fw; pc.height = fh;
+  const pg = pc.getContext("2d", { willReadFrequently: true }); pg.drawImage(src, 0, 0, fw, fh, 0, 0, fw, fh);
+  const hex = (d, i) => "#" + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join("");
+  const colAt = (y, fb) => { const d = pg.getImageData(0, y, fw, 1).data, xs = []; for (let x = 0; x < fw; x++) if (d[x * 4 + 3] > 128) xs.push(x); return xs.length ? hex(d, xs[Math.floor(xs.length / 2)] * 4) : fb; };
+  const shin = shade(colAt(fh - 7, "#2a2a34"), 0.2), thigh = shin, shoe = shade(colAt(fh - 1, "#1a1410"), 0.25);   // read off the legs, a little lighter so they show at night
+  const [c, g] = canvas(fw * 4, fh), R2 = 3;
+  const L = 0.56 * (bb[1] + R2 - hip[1]);
+  for (let f = 0; f < 4; f++) {
+    const X = f * fw; g.drawImage(src, 0, 0, fw, hip[1] + 1, X, 0, fw, hip[1] + 1);
+    const leg = (ang, dim) => {
+      const fx = bb[0] + Math.cos(ang) * R2, fy = bb[1] + Math.sin(ang) * R2, dx = fx - hip[0], dy = fy - hip[1], d = Math.hypot(dx, dy);
+      const up = Math.sqrt(Math.max(0, L * L - d * d / 4)), kx = hip[0] + dx / 2 + (dy / d) * up, ky = hip[1] + dy / 2 - (dx / d) * up;   // the knee bends forward
+      const a = dim ? shade(thigh, -0.25) : thigh, b = dim ? shade(shin, -0.25) : shin, sh = dim ? shade(shoe, -0.25) : shoe;
+      for (const o of [0, 1]) { line(g, Math.round(X + hip[0] + o - 1), Math.round(hip[1]), Math.round(X + kx + o - 1), Math.round(ky), a); line(g, Math.round(X + kx + o - 1), Math.round(ky), Math.round(X + fx + o - 1), Math.round(fy), b); }
+      R(g, Math.round(X + fx - 1), Math.round(fy), 4, 2, sh);
+    };
+    const ang = f * Math.PI / 2;
+    leg(ang + Math.PI, true); leg(ang, false);
+  }
+  const t = tex(c); t.repeat.set(1 / 4, 1);
+  return t;
+}
+/* A bike with turning wheels and cranks, four frames (the street's parked bikes stay still). */
+function bikeSheet(wheel, fr, saddle, bar, crate) {
+  const t = sprite(160, 24, (g) => {
+    for (let f = 0; f < 4; f++) {
+      const X = f * 40, ang = f * Math.PI / 4;
+      const w = (cx) => {
+        for (let a = 0; a < 64; a++) { const r = a / 64 * Math.PI * 2; P(g, X + Math.round(cx + Math.cos(r) * 7), Math.round(16 + Math.sin(r) * 7), (a + f * 4) % 16 < 8 ? wheel[0] : wheel[1]); }
+        const dx = Math.round(Math.cos(ang) * 5), dy = Math.round(Math.sin(ang) * 5);
+        line(g, X + cx - dx, 16 - dy, X + cx + dx, 16 + dy, wheel[2]); line(g, X + cx + dy, 16 - dx, X + cx - dy, 16 + dx, wheel[2]); P(g, X + cx, 16, wheel[3]);
+      };
+      w(8); w(31);
+      const fl = (x0, y0, x1, y1) => line(g, X + x0, y0, X + x1, y1, fr);
+      fl(8, 16, 16, 16); fl(16, 16, 27, 8); fl(14, 7, 27, 8); fl(14, 7, 16, 16); fl(8, 16, 14, 7); fl(27, 8, 31, 16);
+      R(g, X + 11, 5, 6, 2, saddle); line(g, X + 27, 8, X + 26, 3, bar); R(g, X + 24, 3, 5, 1, bar);
+      R(g, X + 29, 4, 7, 4, crate[0]); R(g, X + 30, 5, 5, 2, crate[1]);
+      const ca = f * Math.PI / 2, px = Math.round(Math.cos(ca) * 3), py = Math.round(Math.sin(ca) * 3);   // the crank and its pedals
+      line(g, X + 16 - px, 16 - py, X + 16 + px, 16 + py, wheel[3]); R(g, X + 15 + px, 16 + py, 3, 1, wheel[3]); R(g, X + 15 - px, 16 - py, 3, 1, wheel[2]);
+    }
+  });
+  t.repeat.set(1 / 4, 1);
+  return t;
+}
+
+
 // ================================================================== your character (D43, 2026-10-28)
 /* One townsperson the person chose (data/profile.json "character": the parts in tracker/character-parts.json, drawn by heroSprite). A/D walk them along the street and the
    camera follows. For each application logged, they go to the new light and light it: by bike when it's far, with a
@@ -2541,7 +2659,7 @@ function heroSprite(o0) {
    sends them: nothing lights on its own. Their sprite draws from its own random sequence, so his lights don't move. */
 const HERO_DEFAULT = { coat: "#3a4a6a", hairStyle: "short", hair: "#2a1d14", scarf: "#c8a050", bag: "#6a4a2a", legs: "#2a2a34" };
 const LANE = 3.4, WALK = 1.6, RIDE = 6.5, CYCLE = 4.5, BIKE_FROM = 15;   // metres from the houses; m/s on foot, by bike on an errand, by bike with A/D; bike when further than this
-const hero = { x: 0, z: LANE, dir: 1, held: 0, follow: true, queue: [], job: null, riding: 0, cycle: false, inside: false, ready: false };   // cycle: on the bike by choice (B)
+const hero = { x: 0, z: LANE, y: 0, dir: 1, held: 0, follow: true, queue: [], job: null, riding: 0, cycle: false, inside: false, ready: false, pedal: 0 };   // cycle: on the bike by choice (B)
 // a little of its own colour glows, so the character reads at night away from the lamps (the townsfolk stay dim)
 const heroMat = std({ map: WHITE_TEX, emissiveMap: WHITE_TEX, emissive: 0xffffff, emissiveIntensity: 0.34, alphaTest: 0.5, side: THREE.DoubleSide });
 const heroMesh = new THREE.Mesh(new THREE.PlaneGeometry(HPW, HPH), heroMat);   // its own, bigger frame (p2d_look.js)
@@ -2549,14 +2667,7 @@ const heroShadow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 12), shadowMat)
 heroShadow.rotation.x = -Math.PI / 2; heroShadow.scale.set(1, 0.55, 1);
 // their own Dutch bike, the street's bike drawn in lighter colours (the black one vanishes at night): steel wheels, a cream
 // frame, a brown crate on the front
-const heroBikeTex = sprite(40, 24, (g) => {
-  const wheel = (cx) => { for (let a = 0; a < 64; a++) { const t = a / 64 * Math.PI * 2; P(g, Math.round(cx + Math.cos(t) * 7), Math.round(16 + Math.sin(t) * 7), a % 16 < 8 ? "#8c8a86" : "#6c6a66"); } line(g, cx - 4, 16, cx + 4, 16, "#5a5854"); line(g, cx, 12, cx, 20, "#5a5854"); P(g, cx, 16, "#c8c4bc"); };
-  wheel(8); wheel(31);
-  const fr = "#d8cdb4";
-  line(g, 8, 16, 16, 16, fr); line(g, 16, 16, 27, 8, fr); line(g, 14, 7, 27, 8, fr); line(g, 14, 7, 16, 16, fr); line(g, 8, 16, 14, 7, fr); line(g, 27, 8, 31, 16, fr);
-  R(g, 11, 5, 6, 2, "#3a2a1e"); line(g, 27, 8, 26, 3, "#9a968e"); R(g, 24, 3, 5, 1, "#9a968e");
-  R(g, 29, 4, 7, 4, "#8a5e34"); R(g, 30, 5, 5, 2, "#a8743e");
-});
+const heroBikeTex = bikeSheet(["#8c8a86", "#6c6a66", "#5a5854", "#c8c4bc"], "#d8cdb4", "#3a2a1e", "#9a968e", ["#8a5e34", "#a8743e"]);
 const heroBike = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.5), std({ map: heroBikeTex, emissiveMap: heroBikeTex, emissive: 0xffffff, emissiveIntensity: 0.34, alphaTest: 0.5, side: THREE.DoubleSide }));
 const poleMat = new THREE.MeshLambertMaterial({ color: 0x9a7448, emissive: 0x2a1c0e });
 const heroPole = new THREE.Group();                           // pivots at the hand; the pole points along +y; a small flame at its tip
@@ -2567,10 +2678,12 @@ const heroPole = new THREE.Group();                           // pivots at the h
   const flame = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   flame.name = "flame"; heroPole.add(flame); }
 const doorGlow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0xffb35c, transparent: true, opacity: 0, depthWrite: false }));
-let heroTex = null;
+let heroTex = null, heroPedal = null;
 function setHero(o) {                                        // draw the chosen character (heroSprite: no random draws)
   const t = heroSprite(o);
   if (heroTex) heroTex.dispose();
+  if (heroPedal) heroPedal.dispose();
+  heroPedal = pedalSheet(t.image, HFW, HFH, [14, 29], [15.5, 41]);   // the same character, seated, pedalling
   heroTex = t; heroMat.map = heroMat.emissiveMap = t; heroMat.needsUpdate = true;
   if (!heroMesh.parent) {
     scene.add(heroMesh, heroShadow, heroBike, heroPole, doorGlow);
@@ -2585,6 +2698,70 @@ function personArt(o) {                                      // any character's 
 
 // where the character goes for a light, and what they do there
 const nearX = (x, ref) => x + LOOP * Math.round((ref - x) / LOOP);
+
+/* Things can't pass through each other (2026-11-02, he asked).
+   The tram: townsfolk wait at the kerb until it has passed; it slows, rings and stops short for your character, and your
+   character won't walk into its side. Fixed things (OBST) and other people: everyone steers round them. Your character and
+   the cyclist keep their line and the walkers step aside. */
+const tramNow = { on: false, x: 0, z0: 0, z1: 0, dir: 1 };
+const TRAM_HALF = () => TRAM_W / 2 + 0.5;
+function mustWait(x, dir, z, ahead) {                         // at the kerb, about to step onto the track, with the tram here or coming: wait
+  if (!tramNow.on || !dir) return false;
+  const dx = tramNow.x - x, half = TRAM_HALF();
+  if (Math.abs(dx) < half || dx * dir < 0 || Math.abs(dx) > half + 1.1) return false;
+  return z >= tramNow.z0 - (tramNow.dir > 0 ? ahead : 1) && z <= tramNow.z1 + (tramNow.dir < 0 ? ahead : 1);
+}
+function tramMustStop() {                                     // anyone on the track ahead of it, your character first
+  const half = TRAM_HALF(), front = tramNow.dir > 0 ? tramNow.z1 : tramNow.z0;
+  const onTrack = (x, z) => { if (Math.abs(x - tramNow.x) >= half) return false; const d = (z - front) * tramNow.dir; return d > -0.5 && d < 9; };
+  if (hero.ready && !hero.inside && onTrack(hero.x, hero.z)) return true;
+  if (onTrack(cycl.x, cycl.z)) return true;
+  return people.some((p) => p.speed && onTrack(p.x, p.zNow));
+}
+const QUAY_MIN = 1.9, QUAY_MAX = 8.4;
+let obstNear = [], moversNow = [];
+function nearThings(cx) {                                     // what's close enough to matter, once a frame
+  obstNear = [];
+  for (const o of OBST) { if (!o.b.group.visible) continue; const bx = o.b.group.position.x, x0 = bx + o.x0, x1 = bx + o.x1; if (x1 > cx - 60 && x0 < cx + 60) obstNear.push({ x0, x1, z0: o.z0, z1: o.z1 }); }
+  moversNow = [];
+  if (hero.ready && !hero.inside) { const fast = hero.riding > 0 ? 3 : 0.6; moversNow.push({ who: hero, x0: hero.x - fast, x1: hero.x + fast, z0: hero.z - 0.4, z1: hero.z + 0.4 }); }
+  moversNow.push({ who: cycl, x0: cycl.x - 1.2, x1: cycl.x + 4, z0: cycl.z - 0.45, z1: cycl.z + 0.45 });
+  people.forEach((p) => { if (p.speed && p.zNow < 10) moversNow.push({ who: p, x0: p.x - 0.5, x1: p.x + 0.5, z0: p.zNow - 0.35, z1: p.zNow + 0.35 }); });
+}
+function clearZ(x, dir, zWant, pad, self) {                   // the nearest free line along the quay for something at x heading dir
+  const look = self === hero || self === cycl ? 3.2 : 2.6, a = Math.min(x, x + dir * look), b = Math.max(x, x + dir * look);
+  const yields = people.indexOf(self);                         // walkers give way to your character, the cyclist and any walker before them
+  let z = zWant;
+  for (let pass = 0; pass < 4; pass++) {
+    let hit = null;
+    for (const o of obstNear) if (b + pad >= o.x0 && a - pad <= o.x1 && z + pad >= o.z0 && z - pad <= o.z1) { hit = o; break; }
+    if (!hit && yields >= 0) for (const m of moversNow) {
+      if (m.who === self || (people.indexOf(m.who) >= 0 && people.indexOf(m.who) > yields)) continue;
+      if (b + pad >= m.x0 && a - pad <= m.x1 && z + pad >= m.z0 && z - pad <= m.z1) { hit = m; break; }
+    }
+    if (!hit && self === cycl && hero.ready && !hero.inside && moversNow[0] && moversNow[0].who === hero) { const m = moversNow[0]; if (b + pad >= m.x0 && a - pad <= m.x1 && z + pad >= m.z0 && z - pad <= m.z1) hit = m; }
+    if (!hit) return z;
+    const up = hit.z0 - pad - 0.02, down = hit.z1 + pad + 0.02;
+    z = (Math.abs(up - z) <= Math.abs(down - z) && up >= QUAY_MIN) || down > QUAY_MAX ? up : down;
+  }
+  return Math.max(QUAY_MIN, Math.min(QUAY_MAX, z));
+}
+
+/* Stairs (2026-11-02, he asked: entering and leaving, the steps weren't there). Every door has a step (15 cm); the mansions'
+   raised entrances have five treads up from each side. Your character's height follows them. */
+function stoopOf(H, door, hole) {
+  const sill = hole ? (H.f.H - hole.y - hole.h) / PX : 0.12;
+  if (H.s.stoop && hole) { const pw = (hole.w + 20) / PX; return { stoep: true, cx: door, pw, top: sill, z1: H.zOff + 1.3, foot: pw / 2 + 0.42 * 5 + 0.35, sill }; }
+  return { stoep: false, cx: door, top: 0.15, z1: H.zOff + 0.6, foot: 0, sill };
+}
+function stoopY(st, x, z) {
+  if (z > st.z1 + 0.05) return 0;
+  if (!st.stoep) return st.top;
+  const dx = Math.abs(x - st.cx);
+  if (dx <= st.pw / 2) return st.top;
+  const n = Math.floor((dx - st.pw / 2) / 0.42);
+  return n >= 5 ? 0 : st.top * (5 - n) / 6;
+}
 function houseAt(L) {
   return L.block.H.find((H) => L.x >= H.x - 0.05 && L.x <= H.x + H.w + 0.05 && Math.abs(L.z - H.zOff) < 1.2) || null;
 }
@@ -2593,19 +2770,23 @@ function jobFor(lid) {
   if (L.kind === "lamp") return { lid, kind: "pole", x: lx - 0.7, z: L.z - 0.45, tx: lx, ty: L.y - 0.15 };
   const H = L.kind === "bulbs" ? null : houseAt(L);
   if (H) {
-    const hole = H.f.holes.find((h) => h.kind === "door"), dh = hole ? hole.h / PX : 2.4;
-    return { lid, kind: "door", x: L.block.cx + H.door + shift, z: H.zOff + 0.9, doorZ: H.zOff - FDEPTH + 0.03, dw: H.dw, dh };
+    const hole = H.f.holes.find((h) => h.kind === "door"), dh = hole ? hole.h / PX : 2.4, door = L.block.cx + H.door + shift, st = stoopOf(H, door, hole);
+    const side = st.stoep ? (Math.sign(hero.x - door) || -1) : 0;   // a raised entrance: to the foot of its steps, on the side you come from
+    return { lid, kind: "door", x: door + side * st.foot, z: H.zOff + (st.stoep ? 0.85 : 0.9), doorX: door, doorZ: H.zOff - FDEPTH + 0.03, dw: H.dw, dh, stoop: st, side };
   }
   return { lid, kind: "look", x: lx - 1.2 * Math.sign(lx - hero.x || 1), z: LANE };
 }
 
 /* A job is the trip, then a few timed steps. Each step: [seconds, (u 0..1) => {}, at the end, walking frames?]. */
-const doorLight = (j) => (a) => { doorGlow.visible = a > 0.01; doorGlow.material.opacity = a * 0.92; doorGlow.position.set(j.x, j.dh / 2 + 0.12, j.doorZ); doorGlow.scale.set(j.dw, j.dh, 1); };
+const doorLight = (j) => (a) => { doorGlow.visible = a > 0.01; doorGlow.material.opacity = a * 0.92; doorGlow.position.set(j.doorX, j.dh / 2 + j.stoop.sill, j.doorZ); doorGlow.scale.set(j.dw, j.dh, 1); };
+// up and down a raised entrance's steps, along the front of the house (none for a plain door)
+const climbUp = (j) => (j.stoop.stoep ? [[j.stoop.foot / 1.15, (u) => { hero.x = j.x + (j.doorX - j.x) * u; hero.dir = -j.side; }, null, true]] : []);
+const climbDown = (j) => (j.stoop.stoep ? [[j.stoop.foot / 1.15, (u) => { hero.x = j.doorX + (j.x - j.doorX) * u; hero.dir = j.side; }, null, true]] : []);
 function startJob(lid) {
   const j = jobFor(lid); hero.job = j; j.phase = "go"; j.k = 0; j.u = 0;
   const far = Math.abs(j.x - hero.x) > BIKE_FROM;               // far: gets on the bike, rides, gets off, walks the last steps
   j.bike = far ? (hero.riding >= 1 ? "ride" : "on") : (hero.riding > 0 ? "off" : "");
-  const on = () => setGoal(lid, 1);
+  const on = () => { setGoal(lid, 1); document.dispatchEvent(new CustomEvent("street", { detail: "lit" })); };   // (the chime, in sound.js)
   if (j.kind === "pole") {
     const dx = j.tx - (j.x + 0.25), dy = j.ty - 1.35, len = Math.hypot(dx, dy), up = Math.atan2(-dx, dy), down = up + 1.9;
     const flame = heroPole.getObjectByName("flame");
@@ -2614,9 +2795,9 @@ function startJob(lid) {
     j.steps = [[0.3, () => {}], [0.8, (u) => aim(u * u * (3 - 2 * u)), on], [1.5, () => aim(1)], [0.6, (u) => aim(1 - u), () => { heroPole.visible = false; }]];
   } else if (j.kind === "door") {
     const glow = doorLight(j);
-    j.steps = [[0.3, () => {}], [0.5, (u) => glow(u)], [0.5, (u) => { hero.z = j.z + (j.doorZ + 0.25 - j.z) * u; }, () => { hero.inside = true; }, true],
+    j.steps = [[0.3, () => {}], ...climbUp(j), [0.5, (u) => glow(u)], [0.5, (u) => { hero.z = j.z + (j.doorZ + 0.25 - j.z) * u; }, () => { hero.inside = true; }, true],
       [0.5, (u) => glow(1 - u)], [0.7, () => {}, on], [1.3, () => {}], [0.4, (u) => glow(u), () => { hero.inside = false; }],
-      [0.5, (u) => { hero.z = j.doorZ + 0.25 + (j.z - j.doorZ - 0.25) * u; }, null, true], [0.4, (u) => glow(1 - u)]];
+      [0.5, (u) => { hero.z = j.doorZ + 0.25 + (j.z - j.doorZ - 0.25) * u; }, null, true], [0.4, (u) => glow(1 - u)], ...climbDown(j)];
   } else j.steps = [[0.7, () => {}, on], [1.2, () => {}]];
 }
 function endJob(all) {                                        // all: skip what's left, everything on at once
@@ -2630,13 +2811,15 @@ function stepJob(dt) {
     const dx = j.x - hero.x, ad = Math.abs(dx);
     if (dx) hero.dir = Math.sign(dx);
     if (j.bike === "on") { hero.riding = Math.min(1, hero.riding + dt / 0.35); if (hero.riding >= 1) j.bike = "ride"; return; }
+    if (mustWait(hero.x, hero.dir, hero.z, 1.2)) return;     // the tram is crossing here: wait for it
     if (j.bike === "ride") {                                 // slows down over the last dozen metres
-      if (ad > 3) { hero.x += Math.sign(dx) * Math.min(ad - 3, RIDE * Math.min(1, ad / 12 + 0.25) * dt); hero.z += (LANE + 0.8 - hero.z) * Math.min(1, dt * 2); return; }
+      if (ad > 3) { hero.x += Math.sign(dx) * Math.min(ad - 3, RIDE * Math.min(1, ad / 12 + 0.25) * dt); hero.z += (clearZ(hero.x, hero.dir, LANE + 0.8, 0.5, hero) - hero.z) * Math.min(1, dt * 3); hero.pedalling = true; return; }
       j.bike = "off";
     }
     if (j.bike === "off") { hero.riding = Math.max(0, hero.riding - dt / 0.35); if (hero.riding > 0) return; j.bike = ""; }
     const dz = j.z - hero.z, d = Math.hypot(dx, dz), s = WALK * dt;
     if (d <= s) { hero.x = j.x; hero.z = j.z; j.phase = "act"; j.k = 0; j.u = 0; return; }
+    if (ad > 2.2) { hero.x += Math.sign(dx) * s; hero.z += (clearZ(hero.x, hero.dir, LANE, 0.42, hero) - hero.z) * Math.min(1, dt * 3); return; }   // along the quay, round what's in the way
     hero.x += dx / d * s; hero.z += dz / d * s;
     return;
   }
@@ -2649,24 +2832,35 @@ function stepHero(dt, t) {
   const working = interactive && (hero.job || hero.queue.length);
   if (interactive && !hero.job && hero.queue.length) startJob(hero.queue.shift());
   let walking = false;
+  hero.pedalling = false;
   if (showing) walking = stepShowcase(dt);
   else if (working && hero.job) { stepJob(dt); walking = !!hero.job && (hero.job.phase === "go" ? hero.riding === 0 : hero.stepping); }
   else if (interactive) {                                    // A/D: on foot, or on the bike (B gets on and off)
     hero.riding = hero.cycle ? Math.min(1, hero.riding + dt / 0.35) : Math.max(0, hero.riding - dt / 0.35);
     if (hero.held && (hero.riding >= 1 || hero.riding === 0)) {
       const ride = hero.riding >= 1;
-      hero.dir = hero.held; hero.x += hero.held * (ride ? CYCLE : WALK) * dt;
-      hero.z += ((ride ? LANE + 0.8 : LANE) - hero.z) * Math.min(1, dt * 3); walking = !ride;
+      hero.dir = hero.held;
+      if (!mustWait(hero.x, hero.held, hero.z, 1.2)) {         // (the tram's side: they wait; it brakes for them otherwise)
+        hero.x += hero.held * (ride ? CYCLE : WALK) * dt;
+        hero.z += (clearZ(hero.x, hero.held, ride ? LANE + 0.8 : LANE, ride ? 0.5 : 0.42, hero) - hero.z) * Math.min(1, dt * 3); walking = !ride; hero.pedalling = ride;
+      }
     }
   }
   const ride = hero.riding >= 1, show = FR.cam > 0.6 && !hero.inside;
   heroMesh.visible = heroShadow.visible = show;
+  const st = hero.job && hero.job.stoop, gy = st ? stoopY(st, hero.x, hero.z) : 0;
+  hero.y += (gy - hero.y) * Math.min(1, dt * 16);            // up and down the steps
+  if (hero.pedalling) hero.pedal += dt * 9;
+  const pf = Math.floor(hero.pedal) % 4;
+  const faceTex = ride ? heroPedal : heroTex;
+  if (heroMat.map !== faceTex) { heroMat.map = heroMat.emissiveMap = faceTex; }
   heroTex.offset.x = walking ? (1 + Math.floor(t * 5) % 2) / 3 : 0;
-  heroMesh.position.set(hero.x - (ride ? 0.35 * hero.dir : 0), HPH / 2 + (ride ? 0.3 : walking ? Math.abs(Math.sin(t * 7.9)) * 0.03 : 0), hero.z);
-  heroShadow.position.set(hero.x, 0.02, hero.z);
+  heroPedal.offset.x = pf / 4; heroBikeTex.offset.x = pf / 4;
+  heroMesh.position.set(hero.x - (ride ? 0.35 * hero.dir : 0), HPH / 2 + hero.y + (ride ? 0.3 : walking ? Math.abs(Math.sin(t * 7.9)) * 0.03 : 0), hero.z);
+  heroShadow.position.set(hero.x, 0.02 + hero.y, hero.z);
   faceAt(heroMesh, hero.x); heroMesh.scale.x = hero.dir;
   heroBike.visible = show && hero.riding > 0;
-  if (heroBike.visible) { heroBike.position.set(hero.x + (ride ? 0 : hero.dir * 0.9), 0.75 - (1 - hero.riding) * 0.08, hero.z + 0.06); faceAt(heroBike, hero.x); heroBike.scale.x = hero.dir; }
+  if (heroBike.visible) { heroBike.position.set(hero.x + (ride ? 0 : hero.dir * 0.9), 0.75 - (1 - hero.riding) * 0.08, hero.z - 0.06); faceAt(heroBike, hero.x); heroBike.scale.x = hero.dir; }   // (behind the rider, so the legs show in front of the frame)
 }
 /* The character page's live preview (he asked for "what it'll *actually* look like"): the real street, close up, the
    character by a door, now and then taking a few steps so the walk shows. */
@@ -2684,12 +2878,12 @@ function heroGo(lids) { if (hero.ready) { hero.follow = true; hero.queue.push(..
    step out (he asked: "exit the door that is shown rather than instantly popping up"). */
 function heroHome(H, doorX) {
   if (hero.job || hero.queue.length) return;
-  const hole = H.f.holes.find((h) => h.kind === "door"), dh = hole ? hole.h / PX : 2.4;
-  const j = { lid: 0, kind: "exit", phase: "act", k: 0, u: 0, x: doorX, z: H.zOff + 1.3, doorZ: H.zOff - FDEPTH + 0.03, dw: H.dw, dh };
+  const hole = H.f.holes.find((h) => h.kind === "door"), dh = hole ? hole.h / PX : 2.4, st = stoopOf(H, doorX, hole), side = st.stoep ? 1 : 0;
+  const j = { lid: 0, kind: "exit", phase: "act", k: 0, u: 0, x: doorX + side * st.foot, doorX, z: H.zOff + (st.stoep ? 0.85 : 1.3), doorZ: H.zOff - FDEPTH + 0.03, dw: H.dw, dh, stoop: st, side };
   const glow = doorLight(j), out = j.doorZ + 0.25;
-  Object.assign(hero, { x: doorX, z: out, dir: 1, inside: true, follow: true, riding: 0, cycle: false });
+  Object.assign(hero, { x: doorX, z: out, y: stoopY(st, doorX, out), dir: 1, inside: true, follow: true, riding: 0, cycle: false });
   j.steps = [[0.5, () => {}], [0.5, (u) => glow(u), () => { hero.inside = false; }], [0.8, (u) => { hero.z = out + (j.z - out) * u; }, null, true],
-    [0.5, (u) => glow(1 - u)]];
+    [0.5, (u) => glow(1 - u)], ...climbDown(j)];
   hero.job = j;
 }
 
@@ -3060,7 +3254,9 @@ function update(now) {
     moonGrp.position.copy(camera.position).addScaledVector(_v, 420); moonGrp.quaternion.copy(camera.quaternion);
     moonGrp.scale.setScalar(Math.max(10, FR.rect.h * 0.034) * 420 / fpx);
   }
-  water.material.uniforms.time.value = t; starMat.uniforms.time.value = t; grade.uniforms.time.value = t;
+  water.material.uniforms.time.value = t; starMat.uniforms.time.value = t; studyMat.uniforms.time.value = t; grade.uniforms.time.value = t;
+  behindGround.position.x = camX;
+  TOWERS.forEach((w) => { w.v += (w.goal - w.v) * Math.min(1, dt * 1.2); w.mat.opacity = w.v * 0.3 * FR.light; w.wash.visible = w.mat.opacity > 0.003; });
   stepLights(dt);
   updateLamps(t);
   for (let i = 0; i < MOTES; i++) {
@@ -3071,13 +3267,19 @@ function update(now) {
   }
   moteGeo.attributes.position.needsUpdate = true;
   billboards.forEach((m) => { if (!m.parent || m.parent.visible !== false) faceAt(m, m.position.x + parentX(m)); });
+  nearThings(cx);
   people.forEach((p) => {
     if (p.speed) {
-      p.x += p.speed * dt;
+      const pd = Math.sign(p.speed);
+      p.go += ((mustWait(p.x, pd, p.zNow, 16) ? 0 : 1) - p.go) * Math.min(1, dt * 5);   // waits at the kerb for the tram
+      p.x += p.speed * p.go * dt;
       if (p.x - cx > 48) p.x -= 96; if (p.x - cx < -48) p.x += 96;
-      p.mesh.position.x = p.shadow.position.x = p.x;
-      p.t.offset.x = (1 + Math.floor((t + p.phase) * 4) % 2) / 3;
-      p.mesh.position.y = PH / 2 + Math.abs(Math.sin((t + p.phase) * 6.3)) * 0.03;
+      if (p.z < 10) p.zNow += (clearZ(p.x, pd, p.z, 0.42, p) - p.zNow) * Math.min(1, dt * 3.2);   // steps round whatever's in the way
+      p.mesh.position.x = p.shadow.position.x = p.x; p.mesh.position.z = p.shadow.position.z = p.zNow;
+      const stepping = p.go > 0.25;
+      p.t.offset.x = stepping ? (1 + Math.floor((t + p.phase) * 4) % 2) / 3 : 0;
+      p.mesh.position.y = PH / 2 + (stepping ? Math.abs(Math.sin((t + p.phase) * 6.3)) * 0.03 : 0);
+      if (p.dogMesh) p.dogMesh.position.z = p.zNow + 0.35;
     } else if (p.talk) p.t.offset.x = (Math.floor((t + p.phase) * 0.9) % 3 === 0 ? 1 : 0) / 3;
     else if (p.broom) { const sw = Math.sin((t + p.phase) * 0.35); p.mesh.position.x = p.shadow.position.x = p.home + sw * 1.2; p.t.offset.x = (1 + Math.floor((t + p.phase) * 2.2) % 2) / 3; }
     faceAt(p.mesh, p.mesh.position.x + parentX(p.mesh));
@@ -3088,8 +3290,11 @@ function update(now) {
   });
   stepHero(dt, t);
   critters.forEach((c) => c(t));
-  cycl.x += cycl.speed * dt; if (cycl.x - cx > 50) cycl.x -= 100;
-  cycBike.position.x = cycl.x; cycRider.position.x = cycl.x - 0.2; cycShadow.position.set(cycl.x, 0.02, cycl.z);
+  cycl.go += ((mustWait(cycl.x, 1, cycl.z, 10) ? 0 : 1) - cycl.go) * Math.min(1, dt * 3);   // brakes for the tram too
+  cycl.x += cycl.speed * cycl.go * dt; if (cycl.x - cx > 50) cycl.x -= 100;
+  cycl.z += (clearZ(cycl.x, 1, 6.4, 0.55, cycl) - cycl.z) * Math.min(1, dt * 2.5);
+  cycl.f += dt * 9 * cycl.go; cycPedal.offset.x = cycBikeTex.offset.x = (Math.floor(cycl.f) % 4) / 4;   // pedalling, wheels turning
+  cycBike.position.x = cycl.x; cycRider.position.x = cycl.x - 0.2; cycBike.position.z = cycl.z - 0.06; cycRider.position.z = cycl.z; cycShadow.position.set(cycl.x, 0.02, cycl.z);
   faceAt(cycBike, cycl.x); faceAt(cycRider, cycl.x - 0.2);
   // shadows are redrawn only when a light moved (at most four times a second)
   if (frameNo++ < 3 || (shadowDirty && now - lastShadow > 250)) { renderer.shadowMap.needsUpdate = true; shadowDirty = false; lastShadow = now; }
@@ -3225,6 +3430,7 @@ export const Street = {
     return { x: best.cx, W: f.W, H: f.H, day: f.map.image, lit: f.litMap.image, glow: f.emissive.image,
       windows: f.holes.filter((h) => h.lid).map((h) => ({ x: h.x, y: h.y, w: h.w, h: h.h, k: KOF[h.lid] })),
       door: (f.holes.filter((h) => h.kind === "door").map((h) => ({ x: h.x, y: h.y, w: h.w, h: h.h })))[0] || null,   // where your character goes in (D43)
+      stoep: !!best.H.s.stoop,                               // a raised entrance with steps up from both sides (the picture draws them too)
       roof: Object.assign({}, best.H.roof, { tiles: ROOF[best.H.roof.kind].map.image, eave: best.H.eave }),
       look: { fill: FLAT_FILL, exposure: renderer.toneMappingExposure } };   // how the 3D view shows it at the start (the picture copies it)   // metres from the ground; the picture's px = metres * 16
   },
@@ -3252,7 +3458,15 @@ export const Street = {
     litTex.needsUpdate = true; heroGo(lids); return lids.length;
   },
   finish() { endJob(true); },                                // skip: every light still to do comes on now
-  errands: () => hero.queue.length + (hero.job ? 1 : 0),
+  errands: () => hero.queue.length + (hero.job && hero.job.kind !== "exit" ? 1 : 0),   // (stepping out of the door isn't a light: it used to count as one more)
+  setStudy(nStars, nTowers) {                                // the Skills page: stars for finished study sessions, floodlit towers for certificates passed
+    studyGeo.setDrawRange(0, Math.max(0, Math.min(STUDY_MAX, nStars | 0)));
+    TOWERS.forEach((w, i) => { w.goal = i < (nTowers | 0) ? 1 : 0; });
+  },
+  agents() {                                                 // test pages: where everyone is, to check nothing passes through anything
+    return { hero: { x: hero.x, y: hero.y, z: hero.z, inside: hero.inside, riding: hero.riding }, cyclist: { x: cycl.x, z: cycl.z, go: cycl.go }, tram: Object.assign({}, tramNow),
+      walkers: people.filter((p) => p.speed).map((p) => ({ x: p.x, z: p.zNow, go: p.go })), obstacles: obstNear };
+  },
   get x() { return camX; }, get loop() { return LOOP; },
   setTime(t) { T = t; },                                     // test pages: jump the scene clock (where the tram is)
   step(n = 1) { for (let i = 0; i < n; i++) { const now = performance.now(); last = now - 40; update(now); } },   // test pages: advance frames by hand (hidden windows don't animate)

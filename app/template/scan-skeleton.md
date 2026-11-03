@@ -10,8 +10,7 @@ Working folder: `{{FOLDER}}`. All commands below run from there.
 python app/jobs_cli.py summary
 ```
 
-- `open_jobs` / `jobs_target`: how many open jobs the tracker should hold; `jobs_needed` is the gap.
-- They apply to **{{TARGET}} a day**. Add up to `jobs_needed` per run (cap 40), never lowering the bar below.
+- They apply to **{{TARGET}} a day**. There's no limit on how many jobs to add: add every real one that fits, never lowering the bar below. New jobs land in their Inbox.
 
 ## 2. Close dead jobs
 
@@ -78,7 +77,7 @@ Each job:
   "fit": "now",
   "pay": "$20-24/hr", "salary_min": 41600,
   "closes": "2026-11-30",
-  "status": "queued",
+  "status": "inbox",
   "speed": "fast",
   "why": "2-3 specific sentences.",
   "notes": "One line: posted date, shift, anything they should know."
@@ -90,7 +89,7 @@ Each job:
 - `salary_min`: the bottom of the range as a yearly number (hourly x 2080). Omit if no pay is listed.
 - `closes`: ISO date, or omit.
 - `cover_letter`: `true` when the posting asks for one. Leave it out otherwise.
-- `status`: `queued` if match 4-5 and fit `now`; otherwise `inbox`.
+- Leave `status` as `inbox`: every new job lands in their Inbox first.
 - `speed`: `fast` (private, weeks), `medium` (1-2 months), `slow` (civil service with an exam list, months).
 - Always give the location. Never add a job without a working URL to the posting itself.
 

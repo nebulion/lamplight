@@ -11,21 +11,20 @@
 
 <aside class="rail" id="side">
   <nav id="nav" aria-label="Sections">
-    <p class="site">Applications</p>
+    <p class="site">Applications <button id="railsize" class="rail-arrow" type="button" aria-label="Make the sidebar smaller" title="Make the sidebar smaller"></button></p>
     <ul class="menu">
       <li><a href="#today">Today <span class="n" id="n-today"></span></a></li>
-      <li><a href="#inbox">Inbox <span class="n" id="n-inbox"></span></a></li>
-      <li><a href="#jobs">Jobs <span class="n" id="n-jobs"></span></a></li>
+      <li><a href="#jobs">Jobs <span class="new" id="j-new" role="img" aria-label="New jobs in the Inbox" title="New jobs in the Inbox" hidden></span><span class="n" id="n-jobs"></span></a></li>
       <li><a href="#resume">Resume</a></li>
-      <li><ul class="toc" id="rb-toc" hidden aria-label="Jump to a job"></ul></li>
       <li><a href="#letter">Cover letter</a></li>
       <li class="gap"></li>
       <li><a href="#kit">Paste kit</a></li>
+      <li id="skills-link" hidden><a href="#skills">Skills</a></li>
       <li><a href="#character">Your character</a></li>
       <li><a href="#interview">What I'm looking for</a></li>
       <li id="paths-link" hidden><a href="#home" data-group="paths">Career paths</a></li>
     </ul>
-    <p class="sound-ctl"><button id="snd" aria-pressed="false">Sound off</button><button id="amb" aria-pressed="false" hidden>Street ambience off</button><button id="railsize" type="button">Sidebar: full</button></p>
+    <p class="sound-ctl"><button id="snd" class="icon-btn" aria-pressed="false" aria-label="Sound off" title="Sound off"></button><button id="amb" class="icon-btn" aria-pressed="false" aria-label="Street ambience off" title="Street ambience off" hidden></button></p>
   </nav>
   <svg class="scene" id="scene" role="img" aria-label="A canal at night. Each lit window is an application you sent."></svg>
 </aside>
@@ -37,6 +36,7 @@
 <section id="today" hidden>
   <p class="date" id="t-date"></p>
   <h1 id="t-status"></h1>
+  <p class="bulbs" id="t-bulbs" aria-hidden="true"></p>
   <p class="cue"><span id="t-cue"></span> <button class="quiet" data-act="edit-cue">Change</button></p>
   <div class="now" id="t-now" aria-live="polite"></div>
   <div id="t-next-wrap">
@@ -47,38 +47,34 @@
   <p class="after small" id="t-other">Also counts: <button data-act="vote-agency">a recruiter or agency contact</button>, <button data-act="vote-followup">a follow-up or networking message</button>. Filed for a civil-service exam? <button data-act="exam">Note it</button>. <button data-act="undo">Undo the last one</button>.</p>
 </section>
 
-<!-- ============ INBOX ============ -->
-<section id="inbox" hidden>
-  <h1>Inbox</h1>
-  <p class="lede">New jobs from the daily scan. Queue the ones you'd send. Skipping is fine.</p>
-  <div id="i-list"></div>
-  <h2>Find jobs with Claude</h2>
-  <div id="finder"></div>
-  <h2>Add a job yourself</h2>
-  <form class="form" id="add-form">
-    <label>Job title<input name="title" required></label>
-    <label>Employer<input name="employer" required></label>
-    <label>Link to the posting<input name="url" type="url" required></label>
-    <label>Closes (if it says)<input name="closes" type="date"></label>
-    <label>Resume<select name="resume" id="add-resume"></select></label>
-    <label>Why you qualify, in a sentence<textarea name="why" rows="2"></textarea></label>
-    <button class="btn primary" type="submit">Add to queue</button>
-  </form>
-</section>
-
-<!-- ============ JOBS: queue, later, sent in one list ============ -->
+<!-- ============ JOBS: inbox, up next, queue, later, sent in one list ============ -->
 <section id="jobs" hidden>
   <h1>Jobs</h1>
   <p class="lede" id="j-count"></p>
   <div class="tabs" role="tablist" id="j-tabs"></div>
   <div class="tools">
-    <span>Order by <select class="sortpick" aria-label="Order by"></select></span>
+    <span id="j-sort">Order by <select class="sortpick" aria-label="Order by"></select></span>
     <span><input id="j-q" placeholder="Search" aria-label="Search jobs" autocomplete="off"></span>
   </div>
-  <div class="chips" id="j-chips" aria-label="Quick filters"></div>
+  <div class="filters" id="j-filters" aria-label="Filters"></div>
+  <div class="actions" id="j-inbox-bar" hidden></div>
   <div class="bulkbar" id="j-bulk" hidden></div>
   <ol class="joblist" id="j-list"></ol>
-  <p class="small keys" id="j-keys">Right-click a job for everything you can do with it. Keys: &uarr; &darr; move, Enter opens the posting, Q queue, L later, S skip, D do it now, Space select, / search. Ctrl- or Shift-click to select several.</p>
+  <p class="small keys" id="j-keys"></p>
+  <div id="j-inbox-extra" hidden>
+    <h2>Find jobs with Claude</h2>
+    <div id="finder"></div>
+    <h2>Add a job yourself</h2>
+    <form class="form" id="add-form">
+      <label>Job title<input name="title" required></label>
+      <label>Employer<input name="employer" required></label>
+      <label>Link to the posting<input name="url" type="url" required></label>
+      <label>Closes (if it says)<input name="closes" type="date"></label>
+      <label>Resume<select name="resume" id="add-resume"></select></label>
+      <label>Why you qualify, in a sentence<textarea name="why" rows="2"></textarea></label>
+      <button class="btn primary" type="submit">Add to queue</button>
+    </form>
+  </div>
   <div id="j-sent-extra" hidden>
     <h2>Every one that counted</h2>
     <div class="boardwrap"><table class="board" id="o-votes"></table></div>
@@ -165,6 +161,9 @@
   <div id="k-list"></div>
 </section>
 
+<!-- ============ SKILLS (skills.js fills it) ============ -->
+<section id="skills" hidden></section>
+
 <!-- ============ FIRST RUN (setup.js fills it; opens when data/profile.json is missing) ============ -->
 <section id="setup" hidden></section>
 
@@ -178,6 +177,7 @@
 
 </main>
 </div>
+<script src="/ask.js"></script>
 <script src="/scene3d.js"></script>
 <script src="/sound.js"></script>
 <script src="/resume.js"></script>
@@ -186,5 +186,6 @@
 <script src="/setup.js"></script>
 <script src="/interview.js"></script>
 <script src="/finder.js"></script>
+<script src="/skills.js"></script>
 <script src="/app.js"></script>
 </body></html>
