@@ -10,6 +10,7 @@ import socket
 import subprocess
 import sys
 import threading
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +20,7 @@ import person  # noqa: E402
 import skills
 import store  # noqa: E402
 import make_resumes  # noqa: E402
+import postings  # noqa: E402
 
 PORT = 8765
 WEB = os.path.join(store.ROOT, "tracker")
@@ -83,14 +85,18 @@ def _signature_save(body):
     return {"result": {"ok": True, "v": int(os.path.getmtime(make_resumes.SIGNATURE))}}
 
 
+_make_lock = threading.Lock()
+
+
 def _resume_make(body, letter=False):
     job = None
     if body.get("job_id"):
         job = store.find_job(store.load(), body["job_id"])
     folder = "custom/" + make_resumes.slug(job["employer"] + " " + job["title"]) if job else "custom/general"
     out = _inside_resumes(folder)
-    r = make_resumes.render_letter(body["content"], out) if letter else make_resumes.render_all(body["content"], out)
-    if job:
+    with _make_lock:                                      # LibreOffice runs one at a time
+        r = make_resumes.render_letter(body["content"], out) if letter else make_resumes.render_all(body["content"], out)
+    if job and (r.get("pages", 1) == 1 or not body.get("auto")):      # made automatically (Today): only a one-page result counts
         patch = {"cover_file": r["pdf"], "cover_spec": body.get("spec")} if letter else {"resume_file": r["pdf"], "resume_spec": body.get("spec")}
         store.change(lambda d: store.patch_job(d, job["id"], patch))
     return {"result": r, "data": store.load()}
@@ -137,6 +143,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, missing, ctype) if missing is not None else self._send(404, {"error": "not found"})
         if path == "/api/resume":
             return self._send(200, make_resumes.load_lib())
+        if path == "/api/posting":                          # a job's saved posting, for the builders
+            jid = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("id", [""])[0]
+            return self._send(200, postings.load(jid) or {"missing": True})
         if path == "/api/signature":                        # is a signature on file (and its version, for the image URL)
             sig = make_resumes.SIGNATURE
             return self._send(200, {"exists": os.path.isfile(sig), "v": int(os.path.getmtime(sig)) if os.path.isfile(sig) else 0})
@@ -194,6 +203,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"result": person.save(body["patch"])})
             if name == "reveal":
                 return self._send(200, _reveal(body))
+            if name == "posting_read":                      # read one job's posting now and correct the job from it
+                job = store.find_job(store.load(), body["id"])
+                rec = postings.read_one(job)
+                postings.correct_all({job["id"]})
+                return self._send(200, {"result": rec, "data": store.load()})
             if name == "resume_lib":                        # the builder saved the library (a new wording, a star...)
                 make_resumes.save_lib(body["lib"])
                 return self._send(200, {"result": {"ok": True}})

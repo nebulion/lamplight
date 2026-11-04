@@ -250,6 +250,8 @@ body.street-open .scene [data-k].on{cursor:pointer}
 .job .t:hover{text-decoration:underline;text-underline-offset:3px}
 .job .r{white-space:nowrap;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
 .job .r .soon{color:var(--brick)}
+.datebtn{padding:0;font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.datebtn:hover,.datebtn:hover .soon{color:var(--lamp);text-decoration:underline;text-underline-offset:3px}
 .job .more{width:26px;color:var(--faint);font-size:18px;line-height:1;opacity:0}
 .job:hover .more,.job.cur .more,.job .more:focus-visible{opacity:1}
 .job .more:hover{color:var(--ink)}
@@ -269,7 +271,7 @@ body.street-open .scene [data-k].on{cursor:pointer}
 .cmenu .hd span{display:block;margin-top:2px;font-size:13px;color:var(--muted)}
 .cmenu button{display:flex;justify-content:space-between;align-items:baseline;gap:22px;width:100%;padding:6px 14px;text-align:left;color:var(--ink)}
 .cmenu button:hover,.cmenu button:focus{background:#241e18;color:var(--lamp);outline:none}
-.cmenu button[aria-checked="true"] span::after{content:"  \2713";color:var(--lamp)}
+.cmenu button[aria-checked="true"]{color:var(--lamp);font-weight:700}
 .cmenu kbd{font:inherit;font-size:12.5px;color:var(--faint)}
 .cmenu button:hover kbd,.cmenu button:focus kbd{color:var(--muted)}
 .cmenu .sep{height:1px;margin:5px 0;background:var(--rule)}
@@ -331,6 +333,15 @@ body.street-open .scene [data-k].on{cursor:pointer}
 .rb-sheetbar{display:flex;gap:12px;align-items:baseline}
 .rb-paperbox{flex:none;overflow:hidden}
 body.modal-open{overflow:hidden}
+.pv-sheet{display:flex;flex-direction:column;width:min(94vw,760px);max-height:92vh;background:var(--bg);border:1px solid var(--rule);border-radius:3px;padding:20px 24px;outline:none}
+.pv-bar{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.pv-head b{display:block;font-size:18px;color:var(--ink)}
+.pv-head span{font-size:14.5px;color:var(--muted)}
+.pv-bar .btn{padding:6px 14px;font-size:14.5px;flex:none}
+.pv-asks{margin:12px 0 0;color:var(--ink);font-size:15px}
+.pv-text{flex:1;min-height:0;overflow-y:auto;margin:12px 0;padding-right:8px;white-space:pre-line;font-size:15.5px;line-height:1.5;color:var(--ink)}
+.pv-none{margin:16px 0;color:var(--muted)}
+.pv-foot{margin:0;padding-top:10px;border-top:1px solid var(--rule)}
 
 /* the paper: the .odt's page (Letter, Garamond 12 pt, its margins and spacing), scaled to fit beside the list */
 .rpaper{--s:.686;width:8.5in;height:11in;box-sizing:border-box;padding:.5in .5in .2374in;background:#fff;color:#000;font:12pt/1.05 Garamond,"EB Garamond",Georgia,serif;transform:scale(var(--s));transform-origin:0 0;position:relative;overflow:visible}
@@ -511,6 +522,7 @@ body.rail-menu .street-tile,body.rail-menu .street-cap{display:none!important}
 .filters button:hover{color:var(--ink)}
 .filters button.on{color:var(--ink);border-bottom-color:var(--lamp)}
 .filters button b{font-weight:400;color:var(--lamp)}
+.filters .orderby{margin-right:14px}
 .filters .clear{color:var(--faint);text-decoration:underline;text-underline-offset:3px}
 #j-inbox-bar{margin:0 0 14px}
 .job .upbtn{flex:none;font-size:13.5px;opacity:0}
@@ -521,7 +533,10 @@ body.rail-menu .street-tile,body.rail-menu .street-cap{display:none!important}
 .job .l3 .actions{margin-top:10px}
 .job[draggable="true"]{cursor:grab}
 .job.dragging{opacity:.45}
-.job.dropline{box-shadow:0 -2px 0 var(--lamp)}
+.job.dropline,.dayhead.dropline{box-shadow:0 -2px 0 var(--lamp)}
+.uphead{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}
+.uphead .uphint{color:var(--faint)}
+.uphead .quiet{margin-left:auto;font-size:14px}
 .dayhead{padding:18px 8px 6px;border-bottom:1px solid var(--rule);font-size:14px;color:var(--muted)}
 .dayhead b{font-weight:600;color:var(--lamp)}
 .board tr.un td:first-child{box-shadow:inset 2px 0 0 var(--lamp);padding-left:8px}

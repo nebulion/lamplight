@@ -40,7 +40,7 @@ function render() {
 }
 function renderScan() {
   root.innerHTML = '<p class="small su-count">The job interview, last step</p><h1>Your search instructions</h1>' +
-    '<p class="lede">Claude turns your answers and resume into the instructions your job search follows: what to look for, where, what counts as ideal, good or fallback, and what never to add.</p>' +
+    '<p class="lede">Claude turns your answers and resume into the instructions your job search follows: what to look for, where, how much you want each kind of job, and what never to add.</p>' +
     '<ol class="su-steps"><li><button type="button" class="btn" id="iv-prompt">Copy the prompt for Claude</button> then paste it into <a href="https://claude.ai/new" target="_blank" rel="noopener">a new Claude chat</a>.</li>' +
     '<li>Paste Claude\'s whole answer here:<textarea id="iv-reply" rows="8"></textarea></li></ol>' +
     '<p class="actions"><button type="button" class="btn primary" id="iv-save">Save my search</button> <button type="button" class="quiet" id="iv-back">Back to the questions</button> <span class="small su-err" id="iv-err"></span></p><div id="iv-after"></div>';

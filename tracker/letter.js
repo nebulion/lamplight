@@ -5,12 +5,12 @@
    2. up to three evidence sentences, grouped by job: the first sentence about a job names it, the next ones continue
       from it, so the paragraph reads as one account (v1 pasted whole stories side by side and repeated itself);
    3. a close.
-   Picked by the resume builder's fixed rules (title words 3, other job text 1, on the job's path 2) plus the job's
-   kind (career or service); no AI. Made into a PDF from his .odt's fonts, laid out as a business letter. */
+   Picked by the resume builder's fixed rules (title words 3, the posting's requirements 2, the rest of the posting 1,
+   on the job's path 2) plus the job's kind (career or service); no AI. Made into a PDF from his .odt's fonts, laid out as a business letter. */
 (function () {
 "use strict";
 
-var LIB = null, job = null, spec = null, SC = {};
+var LIB = null, job = null, spec = null, SC = {}, POSTING = null, PARTS = { req: "", body: "" };
 var TARGET = 250;                                   // words: three short paragraphs (his pick)
 var GROUPS = [["openings", "Opening", "one"], ["whys", "Why this work", "one"], ["evidence", "What you've done (in order)", "many"], ["closes", "Close", "one"]];
 
@@ -29,11 +29,12 @@ function defaultEmployer() {   // "NY State Office of Information Technology Ser
 }
 function defaultRef() {        // a posting number the posting asks to quote, e.g. "with 227504 in the subject"
   var t = job ? (job.notes || "") + " " + (job.why || "") : "", m = t.match(/(?:posting|vacancy|job id|requisition|req|subject)\D{0,25}(\d{4,8})|(\d{5,8})\s+in the subject/i);
+  if (!m && POSTING && POSTING.reliable) m = POSTING.text.match(/\b(?:job id|requisition (?:number|no\.?|#|id)|vacancy (?:id|number|no\.?)|posting (?:number|no\.?|#|id))\W{0,4}(\d{4,8})\b/i);
   return m ? (m[1] || m[2]) : "";
 }
 /* key facts (his request, 2026-10-27): degree meets the minimum, the schedule, the start date. Read from the job by
    fixed patterns, each one switchable and editable on the page; they open the closing paragraph. */
-function jobText() { return job ? [job.title, job.notes, job.why, spec && spec.posting].join(" ") : ""; }
+function jobText() { return job ? [job.title, job.notes, job.why, spec && spec.posting, POSTING && POSTING.reliable ? POSTING.text : ""].join(" ") : ""; }
 function defaultSchedule() {
   var t = jobText(), m = t.match(/\bMon(?:day)?\s*[-\u2013]\s*Fri(?:day)?(?:,?\s*\d{1,2}(?::\d\d)?\s*(?:am|pm)?\s*[-\u2013]\s*\d{1,2}(?::\d\d)?\s*(?:am|pm)?)?/i);
   if (m) return m[0].replace(/\bMon(day)?\b/i, "Monday").replace(/\bFri(day)?\b/i, "Friday").replace(/\s*[-\u2013]\s*/g, " to ").replace(/Friday\s*,?\s*(\d)/, "Friday, $1");
@@ -42,7 +43,8 @@ function defaultSchedule() {
 }
 function defaultFacts() {
   var t = jobText();
-  return { degree: kind() === "career" && /bachelor|degree|college|credits? of computer/i.test(t), schedule: defaultSchedule(), start: L().facts.defaultStart, useSchedule: false, useStart: true };
+  var asksDegree = POSTING && POSTING.reliable ? !!(POSTING.facts || {}).degree : /bachelor|degree|college|credits? of computer/i.test(t);
+  return { degree: kind() === "career" && asksDegree, schedule: defaultSchedule(), start: L().facts.defaultStart, useSchedule: false, useStart: true };
 }
 function factsText() {
   var f = spec.facts, F = L().facts, out = [];
@@ -70,16 +72,20 @@ function has(hay, term) {
 }
 function kind() { return job && (job.paths || []).indexOf("everyday") >= 0 ? "service" : "career"; }
 function score(block) {
-  var j = job || {}, title = (j.title || "").toLowerCase(), body = [j.notes, j.why, j.tag, spec && spec.posting].join(" ").toLowerCase();   // not the employer's name: "ITS" isn't intelligent transportation
+  var j = job || {}, title = (j.title || "").toLowerCase();
   var terms = {}; (block.kw || []).forEach(function (k) { terms[k] = 1; }); (block.topics || []).forEach(function (tp) { (LIB.related[tp] || []).forEach(function (k) { terms[k] = 1; }); });
   var s = 0, hits = [];
-  Object.keys(terms).forEach(function (t) { if (has(title, t)) { s += 3; hits.push(t); } else if (has(body, t)) { s += 1; hits.push(t); } });
+  var own = {}; (block.kw || []).forEach(function (k) { own[k] = 1; });   // a whole posting has too many common words for the broad topic words to mean much outside its title and requirements
+  Object.keys(terms).forEach(function (t) { if (has(title, t)) { s += 3; hits.push(t); } else if (PARTS.req && has(PARTS.req, t)) { s += 2; hits.push(t); } else if ((own[t] || !PARTS.full) && has(PARTS.body, t)) { s += 1; hits.push(t); } });
   var pt = {}; (j.paths || []).forEach(function (p) { (LIB.pathTopics[p] || []).forEach(function (x) { pt[x] = 1; }); });
   if ((block.topics || []).some(function (x) { return pt[x]; })) { s += 2; hits.push("your path"); }
   if (block.kind && block.kind !== "any") { if (block.kind === kind()) { s += 4; hits.push(kind() === "service" ? "a service job" : "a career job"); } else s -= 4; }
   return { s: s + (block.star ? 1000 : 0), hits: hits };
 }
-function rescore() { SC = {}; GROUPS.forEach(function (g) { L()[g[0]].forEach(function (b) { SC[g[0] + "/" + b.id] = score(b); }); }); }
+function rescore() {
+  var j = job || {}, pasted = spec && spec.posting, P = !pasted && POSTING && POSTING.reliable ? POSTING : null;   // what's pasted wins over what's saved
+  PARTS = { full: !!P || !!pasted, req: P ? (P.required || "").toLowerCase() : "", body: (P ? ((P.required || "") + "\n" + (P.rest || "")).trim() || P.text : pasted || [j.notes, j.why, j.tag].join(" ")).toLowerCase() };   // not the employer's name: "ITS" isn't intelligent transportation
+  SC = {}; GROUPS.forEach(function (g) { L()[g[0]].forEach(function (b) { SC[g[0] + "/" + b.id] = score(b); }); }); }
 function ranked(group) { return L()[group].filter(function (b) { return !b.block; }).sort(function (a, b) { return SC[group + "/" + b.id].s - SC[group + "/" + a.id].s; }); }
 function block(group, id) { return L()[group].find(function (x) { return x.id === id.split("~")[0]; }); }
 
@@ -192,6 +198,7 @@ function render() {
   $("cl-greeting").value = spec.greeting || L().greeting;
   $("cl-loc").value = spec.location || L().sender[1];
   $("cl-posting").value = spec.posting || "";
+  $("cl-posting-sum").textContent = !job || spec.posting ? (spec.posting ? "Using the text you pasted" : "Paste a posting's text") : POSTING && POSTING.reliable ? "Using the saved posting (" + words(POSTING.text) + " words). Paste here to replace it" : "Couldn't read this posting" + (POSTING && POSTING.problem ? " (" + POSTING.problem + ")" : "") + ". Paste its text here for better picks";
   bar();
   if (!$("cl-modal").hidden) $("cl-paper").innerHTML = paperHTML(content());
 }
@@ -375,7 +382,24 @@ function open(jobId) {
   };
   if (!window.App.data()) return setTimeout(function () { open(jobId); }, 200);
   loadSig();
-  if (LIB) go(); else fetch("/api/resume", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (l) { LIB = l; go(); });
+  var withPosting = function () { (jobId ? window.App.posting(jobId) : Promise.resolve(null)).then(function (p) { POSTING = p; go(); }); };
+  if (LIB) withPosting(); else fetch("/api/resume", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (l) { LIB = l; withPosting(); });
 }
-window.LetterBuilder = { open: open, leave: closePreview };
+/* Made without opening the page, for Today, when the posting asks for a letter (2026-11-03, his choice). */
+function autoMake(jobId, posting) {
+  var ready = LIB ? Promise.resolve() : fetch("/api/resume", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (l) { LIB = l; });
+  return ready.then(loadSig).then(function () {
+    var j = window.App.data().jobs.find(function (x) { return x.id === jobId; });
+    if (!j || !posting || !posting.reliable) return null;
+    var was = [job, spec, POSTING];                            // the page may be open on another job: leave it as it was
+    job = j; spec = null; POSTING = posting;
+    var sp = suggest(), c = content();
+    job = was[0]; spec = was[1]; POSTING = was[2];
+    if (spec) rescore();
+    return fetch("/api/letter_make", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: jobId, spec: sp, content: c, auto: true }) })
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "error"); return d; }); })
+      .then(function (d) { if (d.data) window.App.setData(d.data); return d.result; });
+  });
+}
+window.LetterBuilder = { open: open, leave: closePreview, autoMake: autoMake };
 })();

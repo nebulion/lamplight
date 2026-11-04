@@ -52,7 +52,7 @@ def find_prompt():
             "few weeks), open each one, and only include jobs whose posting you actually read. Never apply, sign in or fill in forms.\n\n"
             "MY RULES\n%s%s\n\nSKIP these, they're already in my tracker:\n%s\n\n"
             "ANSWER with a JSON list between a line saying BEGIN JOBS and a line saying END JOBS, nothing else. Each job:\n"
-            '{"title": "", "employer": "", "url": "the posting itself", "location": "City, ST", "want": "ideal | good | fallback", '
+            '{"title": "", "employer": "", "url": "the posting itself", "location": "City, ST", "want": "ideal | great | good | okay | fallback", '
             '"match": 2-5, "fit": "now | stretch", "pay": "as listed or empty", "salary_min": yearly number or null, '
             '"closes": "YYYY-MM-DD or empty", "cover_letter": true or false, "why": "2-3 sentences matching posting requirements to my facts", '
             '"notes": "one line"}'

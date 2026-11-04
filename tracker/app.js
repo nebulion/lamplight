@@ -11,17 +11,22 @@ var VOTE_LABEL = { application: "Application", agency: "Recruiter or agency", fo
 var REPLY = { "": "No reply yet", no_reply: "Silence", response: "Replied", interview: "Interview", offer: "Offer", rejected: "Said no", withdrew: "I withdrew" };
 
 var D = null, lastVotes = null, TRADEOFF = "", PAY = { floor: 41600, good: 62400 };   // PAY: their floor and comfortable pay, yearly (interview)   // TRADEOFF: their interview answer (ideal stretch first, or sure things first)
-var SPEED_RANK = { fast: 0, medium: 1, slow: 2 };
 var SPEED = { fast: "Usually hires within weeks.", medium: "Usually hires in one to two months.", slow: "Civil service: often takes months." };
+var WANT_BAR = { ideal: 5, great: 4, good: 3, okay: 2, fallback: 1 }, HIRES_BAR = { fast: 5, medium: 3, slow: 1 };
+function thenBest(a, b) { return (nextScore(b) - nextScore(a)) || byDeadline(a, b); }
+function closesKey(j) { return j.closes && days(j.closes) >= 0 ? j.closes : "9999"; }   // no date, or a passed one, goes last
+/* The five bars first, named like the bars (2026-11-03, he asked). A job with no value for a bar goes last; ties go to best next. */
 var SORTS = {
-  next: { label: "best next", fn: function (a, b) { return (nextScore(b) - nextScore(a)) || byDeadline(a, b); } },
-  deadline: { label: "deadline", fn: byDeadline },
-  match: { label: "best fit", fn: function (a, b) { return ((b.match || 0) - (a.match || 0)) || byDeadline(a, b); } },
-  salary: { label: "pay", fn: function (a, b) { return ((b.salary_min || 0) - (a.salary_min || 0)) || byDeadline(a, b); } },
-  newest: { label: "newest", fn: function (a, b) { return cmp(b.added, a.added) || byDeadline(a, b); } },
-  employer: { label: "employer", fn: function (a, b) { return (a.employer || "").localeCompare(b.employer || "") || byDeadline(a, b); } },
-  speed: { label: "fastest to hire", fn: function (a, b) { return ((SPEED_RANK[a.speed] || 1) - (SPEED_RANK[b.speed] || 1)) || ((b.match || 0) - (a.match || 0)) || byDeadline(a, b); } }
+  next: { label: "Best next", fn: thenBest },
+  want: { label: "Want", word: "highest", fn: function (a, b) { return ((WANT_BAR[b.want] || 0) - (WANT_BAR[a.want] || 0)) || thenBest(a, b); } },
+  match: { label: "Fit", word: "highest", fn: function (a, b) { return ((b.match || 0) - (a.match || 0)) || thenBest(a, b); } },
+  salary: { label: "Pay", word: "highest", fn: function (a, b) { return ((b.salary_min || 0) - (a.salary_min || 0)) || thenBest(a, b); } },
+  speed: { label: "Hires", word: "fastest", fn: function (a, b) { return ((HIRES_BAR[b.speed] || 0) - (HIRES_BAR[a.speed] || 0)) || thenBest(a, b); } },
+  deadline: { label: "Time left", word: "least", fn: function (a, b) { return cmp(closesKey(a), closesKey(b)) || thenBest(a, b); } },
+  newest: { label: "Newest", fn: function (a, b) { return cmp(b.added, a.added) || thenBest(a, b); } },
+  employer: { label: "Employer", word: "A to Z", fn: function (a, b) { return (a.employer || "").localeCompare(b.employer || "") || thenBest(a, b); } }
 };
+var SORT_MENU = ["next", "-", "want", "match", "salary", "speed", "deadline", "-", "newest", "employer"];
 var sortKey = store("sort-v2") || "next";      // v2: "best next" became the default (2026-10-27)
 if (!SORTS[sortKey]) sortKey = "next";
 
@@ -46,7 +51,7 @@ function nextScore(j) {
   if (d !== null && d >= 0) s += Math.max(0, 14 - d) * 2.5;
   s += { fast: 12, medium: 5, slow: 0 }[j.speed] || 4;
   if (safeBet(j)) s += 8;
-  s += { ideal: 25, good: 10, fallback: -10 }[j.want] || 0;          // how much they want it, from their scan (D42; his jobs have none)
+  s += { ideal: 25, great: 18, good: 10, okay: 0, fallback: -10 }[j.want] || 0;          // how much they want it (D42), set by their scan or changed from the right-click menu
   if (j.fit === "stretch") s -= TRADEOFF === "An ideal job I'm under-qualified for" && j.want === "ideal" ? 0 : 6;
   if (j.fit === "exam" || j.fit === "later" || j.fit === "watch") s -= 15;
   return s;
@@ -95,11 +100,11 @@ function versionOf(path, j) {
 /* The facts about a job as small five-step bars (2026-10-28, he asked: "on a slider... or on a bar, like a battery"):
    fit (how many requirements you meet), how much you want it, how fast they hire, pay against your floor and
    comfortable pay, and time left to apply. The words behind each bar are in its title (hover) and for screen readers. */
-var WANT_WORD = { ideal: "Ideal for you", good: "A good one", fallback: "A fallback" };
+var WANT_WORD = { ideal: "Ideal", great: "Great", good: "Good", okay: "Okay", fallback: "Fallback" };
 function meterRows(j) {
   var rows = [], d = j.closes ? days(j.closes) : null, y = j.salary_min || 0;
   if (j.match) rows.push(["Fit", j.match, FIT[j.match]]);
-  if (j.want) rows.push(["Want", { ideal: 5, good: 3, fallback: 1 }[j.want], WANT_WORD[j.want]]);
+  if (j.want) rows.push(["Want", WANT_BAR[j.want], WANT_WORD[j.want]]);
   if (j.speed) rows.push(["Hires", { fast: 5, medium: 3, slow: 1 }[j.speed], SPEED[j.speed]]);
   if (y) rows.push(["Pay", y >= PAY.good * 1.15 ? 5 : y >= PAY.good ? 4 : y >= (PAY.floor + PAY.good) / 2 ? 3 : y >= PAY.floor ? 2 : 1,
     "About $" + Math.round(y / 1000) + "k a year (your floor $" + Math.round(PAY.floor / 1000) + "k, comfortable $" + Math.round(PAY.good / 1000) + "k)"]);
@@ -146,17 +151,13 @@ function render() {
   $("n-today").textContent = t + "/" + target;
   $("j-new").hidden = !jobs("inbox").length;                    // the small square next to Jobs: the Inbox has something (his choice over "(New!)")
   $("n-jobs").textContent = D.jobs.filter(isOpen).length;
-  document.querySelectorAll(".sortpick").forEach(function (sel) {
-    if (!sel.options.length) Object.keys(SORTS).forEach(function (k) { sel.add(new Option(SORTS[k].label, k)); });
-    sel.value = sortKey;
-  });
   var n = D.votes.length;
   window.Scene && Scene.setLit(n, lastVotes !== null && n > lastVotes);
   window.Scene && Scene.setToday && Scene.setToday(t, target);   // the street's foreground bulbs: one per application today
   scheduleMidnight();
   if (lastVotes !== null && n > lastVotes && window.Sound) Sound.sent(D.votes[n - 1].type);   // only for something you just logged
   lastVotes = n;
-  renderToday(); renderInbox(); renderJobs(); renderPathBoards();
+  renderToday(); renderInbox(); renderJobs(); renderPathBoards(); renderKitWhy();
 }
 
 /* Today: one job, then a short departure board */
@@ -193,14 +194,14 @@ function renderToday() {
   box.innerHTML = done +
     '<p class="employer">' + esc(j.employer) + (j.location ? ", " + esc(j.location) : "") + "</p>" +
     "<h2>" + esc(j.title) + "</h2>" +
-    '<p class="facts"><span class="' + (soon(j) ? "soon" : "") + '">' + whenLong(j) + ".</span>" + (j.pay ? " Pays " + esc(j.pay) + "." : "") + "</p>" + meters(j) +
+    '<p class="facts"><button type="button" class="datebtn" data-act="set-closes" data-id="' + esc(j.id) + '" title="Change the closing date"><span class="' + (soon(j) ? "soon" : "") + '">' + whenLong(j) + ".</span></button>" + (j.pay ? " Pays " + esc(j.pay) + "." : "") + "</p>" + meters(j) +
     (j.why ? '<p class="why">' + esc(j.why) + "</p>" : "") +
     (j.toward_planning ? '<p class="resume">Toward planning: ' + esc(j.toward_planning) + "</p>" : "") +
     '<div class="need"><p class="need-h">You\'ll need</p>' +
-    (f ? '<p class="resume">Attach <b>' + esc(f.split("/").pop()) + '</b> <span class="small">(' + esc(j.resume_file ? "made for this job" : f.split("/")[0]) + (addrIndex(j) >= 0 ? ", " + esc(ADDRS[addrIndex(j)].location) : "") + ')</span> &nbsp;<button class="quiet" data-act="reveal" data-file="' + esc(f) + '">Show file</button> <a class="quiet" href="#resume/' + esc(j.id) + '">' + (j.resume_file ? "Adjust it" : "Make one for this job") + "</a>" +
+    (f ? '<p class="resume">Attach <b>' + esc(f.split("/").pop()) + '</b> <span class="small">(' + esc(j.resume_file ? "made for this job" : f.split("/")[0]) + (addrIndex(j) >= 0 ? ", " + esc(ADDRS[addrIndex(j)].location) : "") + ')</span> &nbsp;<button class="quiet" data-act="reveal" data-file="' + esc(f) + '">Show file</button> <a class="quiet" href="#resume/' + esc(j.id) + '">' + (j.resume_file ? "Adjust it" : "Make one for this job") + "</a>" + (autoState[j.id] === "busy" && !j.resume_file ? ' <span class="small">Making one for this job\u2026</span>' : "") +
       (addrIndex(j) >= 0 ? ' <button class="quiet" data-act="swap-addr" data-id="' + esc(j.id) + '">Use ' + esc(ADDRS[(addrIndex(j) + 1) % ADDRS.length].location) + "</button>" : "") + "</p>" : "") +
     (j.cover_file ? '<p class="resume">Attach <b>' + esc(versionOf(j.cover_file, j).split("/").pop()) + '</b> <span class="small">(made for this job)</span> &nbsp;<button class="quiet" data-act="reveal" data-file="' + esc(versionOf(j.cover_file, j)) + '">Show file</button> <a class="quiet" href="#letter/' + esc(j.id) + '">Adjust it</a></p>'
-      : needsLetter(j) ? '<p class="resume">This one asks for a cover letter. <a class="quiet" href="#letter/' + esc(j.id) + '">Write one</a></p>' : "") +
+      : needsLetter(j) ? '<p class="resume">This one asks for a cover letter. <a class="quiet" href="#letter/' + esc(j.id) + '">' + (autoState[j.id] === "busy" ? "Making one\u2026" : "Write one") + "</a></p>" : "") +
     '<p class="resume">Apply with <b>' + esc(emailOf(j)) + '</b> &nbsp;<button class="quiet" data-act="copy-text" data-text="' + esc(emailOf(j)) + '">Copy</button> <button class="quiet" data-act="edit-email">Change address</button></p>' +
     '</div><div id="t-act"></div>';
   /* (2026-10-28, he asked for a smoother flow) Opening the posting no longer swaps the buttons for a question: they stay,
@@ -209,7 +210,7 @@ function renderToday() {
   var openBtn = function (main, label) { return '<a class="btn' + (main ? " primary" : "") + '" href="' + esc(safeUrl(j.url)) + '" target="_blank" rel="noopener" data-act="open" data-id="' + id + '">' + label + "</a>"; };
   var sentBtn = function (main) { return '<button class="btn' + (main ? " primary" : "") + '" data-act="sent" data-id="' + id + '">I sent it</button>'; };
   act.innerHTML = (opened ? '<p class="opened">Opened ' + ago(opened) + ". When you've submitted it, press <b>I sent it</b>.</p>" : "") +
-    '<div class="actions">' + (opened ? sentBtn(true) + openBtn(false, "Open again") : openBtn(true, "Open posting") + sentBtn(false)) + "</div>" +
+    '<div class="actions">' + (opened ? sentBtn(true) + openBtn(false, "Open again") : openBtn(true, "Open posting") + sentBtn(false)) + '<button class="quiet" data-act="read-posting" data-id="' + id + '">Read it here</button></div>' +
     '<p class="notthis">Not this one: <button class="quiet" data-act="skip" data-id="' + id + '">skip for today</button> · ' +
     '<button class="quiet" data-act="later" data-id="' + id + '">later</button> · <button class="quiet" data-act="skip-for-good" data-id="' + id + '">not for me</button>' +
     '<span class="keys">Keys: O opens the posting, S marks it sent.</span></p>';
@@ -221,6 +222,53 @@ function renderToday() {
     }).join("") + "</tbody>";
   var rest = q.length - 1 - next.length;
   $("t-more").innerHTML = (rest > 0 ? rest + ' more in <a href="#jobs">Jobs</a>. ' : "") + (jobs("inbox").length ? jobs("inbox").length + ' new in the <a href="#inbox">inbox</a>.' : "");
+  autoDocs(j);
+}
+/* The job on Today gets its own resume from its posting without being asked, and a letter if the posting asks for one
+   (2026-11-03, his choice). One at a time, once per job per visit; if anything fails the premade resume stays. */
+var autoState = {}, autoChain = Promise.resolve();
+function postingFor(id) {
+  return fetch("/api/posting?id=" + encodeURIComponent(id), { cache: "no-store" }).then(function (r) { return r.json(); })
+    .then(function (p) { return p.missing ? post("posting_read", { id: id }) : p; })
+    .catch(function () { return null; });
+}
+function showPosting(id) {
+  var j = jobById(id); if (!j) return;
+  closeMenu();
+  postingFor(id).then(function (p) {
+    var ok = p && p.reliable, m = document.createElement("div");
+    m.className = "rb-modal postview"; m.setAttribute("role", "dialog"); m.setAttribute("aria-label", "The saved posting");
+    m.innerHTML = '<div class="pv-sheet" tabindex="-1"><div class="pv-bar"><div class="pv-head"><b>' + esc(j.title) + "</b><span>" + esc(j.employer) + (j.location ? ", " + esc(j.location) : "") + '</span></div><button class="btn" type="button" data-pv="close">Close</button></div>' +
+      (j.asks ? '<p class="pv-asks">' + esc(j.asks) + "</p>" : "") +
+      (ok ? '<div class="pv-text">' + esc(p.text) + "</div>" : '<p class="pv-none">' + (p && p.gone ? "This posting is gone: " + esc(p.gone) + "." : "This posting couldn't be read" + (p && p.problem ? " (" + esc(p.problem) + ")" : "") + ".") + "</p>") +
+      '<p class="small pv-foot">' + (ok ? "Saved " + dm(p.read) + ". " : "") + '<a href="' + esc(safeUrl(j.url)) + '" target="_blank" rel="noopener">Open it on their site</a></p></div>';
+    var close = function () { m.remove(); document.body.classList.remove("modal-open"); document.removeEventListener("keydown", onKey); };
+    var onKey = function (e) { if (e.key === "Escape") close(); };
+    m.addEventListener("click", function (e) { if (e.target === m || e.target.getAttribute("data-pv") === "close") close(); });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(m); document.body.classList.add("modal-open");
+    m.querySelector("[data-pv]").focus();
+  });
+}
+function autoDocs(j) {
+  if (!j || $("today").hidden || autoState[j.id] || !window.ResumeBuilder || !window.LetterBuilder) return;
+  if (j.resume_file && (j.cover_file || !needsLetter(j))) return;
+  autoState[j.id] = "busy";
+  var box = function () { var el = $("t-now"); return el && el.getAttribute("data-job") === j.id; };
+  if (box()) renderToday();
+  autoChain = autoChain.then(function () {
+    return postingFor(j.id).then(function (p) {
+      if (!p || !p.reliable) return null;
+      var cur = jobById(j.id);
+      return (cur && cur.resume_file ? Promise.resolve() : ResumeBuilder.autoMake(j.id, p)).then(function () {
+        cur = jobById(j.id);
+        return cur && !cur.cover_file && needsLetter(cur) ? LetterBuilder.autoMake(j.id, p) : null;
+      });
+    });
+  }).catch(function () { return null; }).then(function () {
+    autoState[j.id] = "done";
+    if (box()) renderToday();
+  });
 }
 
 function renderInbox() {                                     // the Inbox is a tab of Jobs; what's left here is the add form's list of resumes
@@ -240,14 +288,16 @@ function stateCell(j) {
 /* ---------------- Jobs: queue, later and sent in one list ----------------
    Two-line rows instead of columns; tabs for status; quick filters; select several for bulk changes;
    keyboard shortcuts; and a right-click menu with everything you can do to a job (2026-10-27). */
-var TABS = [["all", "All open"], ["inbox", "Inbox"], ["up", "Up next"], ["queued", "Queued"], ["later", "Later"], ["sent", "Sent"]];
+var TABS = [["all", "All open"], ["inbox", "Inbox"], ["queued", "Queued"], ["later", "Later"], ["sent", "Sent"]];
 var STATUS_WORD = { inbox: "new", queued: "queued", later: "later", skipped: "skipped", closed: "closed", applied: "sent" };
 var jTab = store("jobs-tab") || "all";
 var picked = {}, cursor = null, anchorId = null, shown = [], openRows = {}, pendingJump = null;
+if (jTab === "up") jTab = "queued";                            // Up next is the top of Queued now
 if (!TABS.some(function (t) { return t[0] === jTab; })) jTab = "all";
 
-/* Up next (2026-11-02, he chose it): a short list in his own order that Today takes from first. It lives in settings as
-   ids; a job only counts while it's queued, so sending or moving one takes it off by itself. */
+/* Up next (2026-11-02, he chose it): the top of the queue, in his own order, that Today takes from first (its own tab until
+   2026-11-03, when he said it belongs in the queue). It lives in settings as ids; a job only counts while it's queued, so
+   sending or moving one takes it off by itself. */
 function upIds() { return (D.settings.up_next || []).filter(function (id) { var j = jobById(id); return j && j.status === "queued"; }); }
 function saveUp(ids) { return post("settings", { patch: { up_next: ids } }); }
 function addUp(ids) {
@@ -312,14 +362,33 @@ function inTab(j) {
   if (jTab === "queued") return j.status === "queued";
   if (jTab === "later") return j.status === "later";
   if (jTab === "inbox") return j.status === "inbox";
-  if (jTab === "up") return upIds().indexOf(j.id) >= 0;
   if (picks("more").indexOf("gone") >= 0 && (j.status === "skipped" || j.status === "closed")) return true;
   return ["inbox", "queued", "later"].indexOf(j.status) >= 0;
 }
+var CARET = '<svg viewBox="0 0 10 6" width="9" height="6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+function sortButton() {
+  if (jTab === "sent") return "";                               // Sent is always newest first (he asked)
+  return '<button type="button" class="orderby" data-sort aria-haspopup="menu">Order by: <b>' + esc(SORTS[sortKey].label) + "</b>" + CARET + "</button>";
+}
+function openSort(btn, once) {                                  // once: reorder Up next this one time; he can still drag afterwards
+  closeMenu();
+  var items = SORT_MENU.map(function (k) {
+    if (k === "-") return { sep: true };
+    var it = { label: SORTS[k].label, key: SORTS[k].word, run: function () {
+      if (once) { saveUp(upIds().map(jobById).sort(SORTS[k].fn).map(function (j) { return j.id; })); return; }
+      sortKey = k; store("sort-v2", sortKey); render();
+    } };
+    if (!once) it.checked = k === sortKey;
+    return it;
+  });
+  var r = btn.getBoundingClientRect();
+  menuEl = buildMenu(items, r.left, r.bottom + 4);
+  var first = menuEl.querySelector("button"); if (first) first.focus();
+}
 function renderFilters() {
-  $("j-filters").innerHTML = filtersFor().map(function (k) {
+  $("j-filters").innerHTML = sortButton() + filtersFor().map(function (k) {
     var on = picks(k), opts = FILTERS[k].options(), names = on.map(function (v) { var o = opts.filter(function (x) { return x[0] === v; })[0]; return o ? o[1] : ""; }).filter(Boolean);
-    return '<button type="button" data-filter="' + k + '" aria-haspopup="menu" class="' + (names.length ? "on" : "") + '">' + FILTERS[k].label + (names.length ? ": <b>" + esc(names.length > 2 ? names.length + " picked" : names.join(", ")) + "</b>" : "") + '<svg viewBox="0 0 10 6" width="9" height="6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>';
+    return '<button type="button" data-filter="' + k + '" aria-haspopup="menu" class="' + (names.length ? "on" : "") + '">' + FILTERS[k].label + (names.length ? ": <b>" + esc(names.length > 2 ? names.length + " picked" : names.join(", ")) + "</b>" : "") + CARET + "</button>";
   }).join("") + (filtersFor().some(function (k) { return picks(k).length; }) ? '<button type="button" class="clear" data-filter-clear>Clear</button>' : "");
 }
 function openFilter(k, btn) {
@@ -353,6 +422,7 @@ function jobRow(j) {
   else if (d === null) right = "No closing date";
   else if (d < 0) right = "Closed " + dm(j.closes);
   else right = '<span class="' + (soon(j) ? "soon" : "") + '">' + (d <= 7 ? (d === 0 ? "Closes today" : d === 1 ? "Closes tomorrow" : d + " days left") : "Closes " + dm(j.closes)) + "</span>";
+  if (jTab !== "sent") right = '<button type="button" class="datebtn" data-act="set-closes" data-id="' + esc(j.id) + '" title="Change the closing date">' + right + "</button>";
   var bits = [esc(j.employer) + (j.location ? ", " + esc(j.location) : "")];
   if (jTab === "sent") {
     bits.push(replySelect(j));
@@ -361,21 +431,23 @@ function jobRow(j) {
     if (j.pay) bits.push(esc(j.pay));
     var mt = meters(j, true); if (mt) bits.push(mt);
     if (jTab === "all" && j.status !== "queued") bits.push('<span class="st">' + STATUS_WORD[j.status] + "</span>");
-    if (isUp && jTab !== "up") bits.push('<span class="nx">up next</span>');
+    if (isUp && jTab !== "queued") bits.push('<span class="nx">up next</span>');
     if (needsLetter(j)) bits.push('<span class="st">' + (j.cover_file ? "letter made" : "asks for a cover letter") + "</span>");
     var why = sortKey === "next" && !mt ? reasonFor(j) : "";      // the bars already say it
     if (why) bits.push('<span class="nx">' + why + "</span>");
   }
   var canUp = ["inbox", "queued", "later"].indexOf(j.status) >= 0;
-  var upBtn = !canUp ? "" : isUp ? (jTab === "up" ? '<button class="quiet upbtn" data-act="up-remove" data-id="' + esc(j.id) + '">Remove</button>' : "") : '<button class="quiet upbtn" data-act="up-add" data-id="' + esc(j.id) + '">Up next</button>';
+  var upBtn = !canUp ? "" : isUp ? (jTab === "queued" ? '<button class="quiet upbtn" data-act="up-remove" data-id="' + esc(j.id) + '">Take off</button>' : "") : '<button class="quiet upbtn" data-act="up-add" data-id="' + esc(j.id) + '">Up next</button>';
   var detail = "";
   if (openRows[j.id]) {
     detail = '<div class="l3">' + (j.why ? '<p class="why">' + esc(j.why) + "</p>" : "") +
       (j.toward_planning ? '<p class="note">Toward planning: ' + esc(j.toward_planning) + "</p>" : "") +
+      (j.asks ? '<p class="note">' + esc(j.asks) + "</p>" : "") +
       (j.notes ? '<p class="note">' + esc(j.notes) + "</p>" : "") +
+      '<p class="note"><button class="quiet" data-act="read-posting" data-id="' + esc(j.id) + '">Read the saved posting</button></p>' +
       (j.status === "inbox" ? '<div class="actions"><button class="btn" data-act="queue" data-id="' + esc(j.id) + '">Queue it</button><button class="btn" data-act="up-add" data-id="' + esc(j.id) + '">Up next</button><button class="quiet" data-act="later" data-id="' + esc(j.id) + '">Later</button><button class="quiet" data-act="skip-for-good" data-id="' + esc(j.id) + '">Skip</button></div>' : "") + "</div>";
   }
-  return '<li class="job' + (picked[j.id] ? " picked" : "") + (cursor === j.id ? " cur" : "") + (openRows[j.id] ? " open" : "") + '" data-id="' + esc(j.id) + '"' + (jTab === "up" ? ' draggable="true"' : "") + ">" +
+  return '<li class="job' + (picked[j.id] ? " picked" : "") + (cursor === j.id ? " cur" : "") + (openRows[j.id] ? " open" : "") + '" data-id="' + esc(j.id) + '"' + (jTab === "queued" ? ' draggable="true"' : "") + ">" +
     '<div class="l1"><a class="t" href="' + esc(safeUrl(j.url)) + '" target="_blank" rel="noopener" data-act="open" data-id="' + esc(j.id) + '">' + esc(j.title) + "</a>" + upBtn +
     '<span class="r">' + right + '</span><button class="more" data-act="menu" data-id="' + esc(j.id) + '" aria-label="Actions for this job" aria-haspopup="menu">&#8943;</button></div>' +
     '<div class="l2">' + bits.join('<span class="dot"> &middot; </span>') + "</div>" + detail + "</li>";
@@ -384,16 +456,18 @@ function strongInbox() { return jobs("inbox").filter(function (j) { return (j.ma
 function renderJobs() {
   var open = D.jobs.filter(isOpen).length;
   $("j-count").innerHTML = '<span class="count">' + open + "</span> open jobs. " + jobs("applied").length + " sent so far.";
-  var counts = { all: D.jobs.filter(function (j) { return ["inbox", "queued", "later"].indexOf(j.status) >= 0; }).length, inbox: jobs("inbox").length, up: upIds().length, queued: jobs("queued").length, later: jobs("later").length, sent: jobs("applied").length };
+  var counts = { all: D.jobs.filter(function (j) { return ["inbox", "queued", "later"].indexOf(j.status) >= 0; }).length, inbox: jobs("inbox").length, queued: jobs("queued").length, later: jobs("later").length, sent: jobs("applied").length };
   $("j-tabs").innerHTML = TABS.map(function (t) {
     return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === jTab) + '">' + t[1] + '<span class="n">' + counts[t[0]] + "</span></button>";
   }).join("");
   renderFilters();
-  $("j-sort").hidden = jTab === "sent" || jTab === "up";        // Sent is always newest first; Up next is his own order
   var list = D.jobs.filter(function (j) { return inTab(j) && filtersPass(j) && searchPass(j); });
   if (jTab === "sent") list = list.sort(function (a, b) { return cmp(b.applied_date, a.applied_date); });
-  else if (jTab === "up") { var u = upIds(); list = list.sort(function (a, b) { return u.indexOf(a.id) - u.indexOf(b.id); }); }
-  else list = sorted(list);
+  else if (jTab === "queued") {                                 // Up next first, in his order; then the rest in the chosen order
+    var u = upIds(), onUp = list.filter(function (j) { return u.indexOf(j.id) >= 0; }).sort(function (a, b) { return u.indexOf(a.id) - u.indexOf(b.id); });
+    var restQ = sorted(list.filter(function (j) { return u.indexOf(j.id) < 0; }));
+    list = onUp.concat(restQ);
+  } else list = sorted(list);
   shown = list.map(function (j) { return j.id; });
   Object.keys(picked).forEach(function (id) { if (shown.indexOf(id) < 0) delete picked[id]; });
   var html = "";
@@ -405,15 +479,18 @@ function renderJobs() {
       if (k !== day) { day = k; html += '<li class="dayhead">' + (k ? new Date(k + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "No date") + ": <b>" + byDay[k] + " sent</b></li>"; }
       html += jobRow(j);
     });
+  } else if (jTab === "queued" && onUp.length) {
+    html = '<li class="dayhead uphead">Up next: <b>' + onUp.length + '</b> <span class="uphint">Today takes these first</span> <button type="button" class="quiet" data-sort-up aria-haspopup="menu">Reorder by</button></li>' + onUp.map(jobRow).join("") +
+      (restQ.length ? '<li class="dayhead resthead">Rest of the queue: <b>' + restQ.length + "</b></li>" + restQ.map(jobRow).join("") : "");
   } else html = list.map(jobRow).join("");
-  var EMPTY_TAB = { queued: "Nothing queued. Queue jobs from the Inbox tab.", inbox: "Nothing new. The daily scan adds jobs here.", up: "Nothing on Up next. Right-click a job, or press U, to add it. Today takes from this list first." };
+  var EMPTY_TAB = { queued: "Nothing queued. Queue jobs from the Inbox tab.", inbox: "Nothing new. The daily scan adds jobs here." };
   $("j-list").innerHTML = html || '<li class="empty muted">' + (EMPTY_TAB[jTab] || "Nothing matches.") + "</li>";
   renderBulk();
   var strong = jTab === "inbox" ? strongInbox() : [];
   $("j-inbox-bar").hidden = !strong.length;
   if (strong.length) $("j-inbox-bar").innerHTML = '<button class="btn" data-act="queue-strong">Queue the ' + strong.length + " strong " + (strong.length === 1 ? "match" : "matches") + "</button>";
   $("j-inbox-extra").hidden = jTab !== "inbox";
-  $("j-keys").textContent = "Click a job to read it, right-click for everything you can do with it. Keys: \u2191 \u2193 move, Enter opens the posting, U up next, Q queue, L later, S skip, D do it now, Space select, / search. Ctrl- or Shift-click to select several." + (jTab === "up" ? " Drag to reorder, or Alt+\u2191 \u2193." : "");
+  $("j-keys").textContent = "Click a job to read it, right-click for everything you can do with it. Keys: \u2191 \u2193 move, Enter opens the posting, U up next, Q queue, L later, S skip, D do it now, Space select, / search. Ctrl- or Shift-click to select several." + (jTab === "queued" ? " Drag a job into or out of Up next, or reorder with Alt+\u2191 \u2193." : "");
   $("j-sent-extra").hidden = jTab !== "sent";
   if (jTab === "sent") {
     var byId = {}; D.jobs.forEach(function (j) { byId[j.id] = j; });
@@ -537,6 +614,30 @@ function toast(msg, undo) {
    each get their own list. Arrow keys move, Enter picks, Esc closes, Right opens a sub-list. */
 var menuEl = null;
 function closeMenu() { document.querySelectorAll(".cmenu").forEach(function (m) { m.remove(); }); menuEl = null; }
+var MONTHS = "jan feb mar apr may jun jul aug sep oct nov dec".split(" ");
+function readDate(s) {                                          // "Nov 30", "30 Nov", "11/30", "11/30/26" or 2026-11-30; a year left out means the next time that date comes
+  s = s.trim().toLowerCase();
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/), y, mo, d;
+  if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/))) { mo = +m[1]; d = +m[2]; y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : 0; }
+  else if ((m = s.match(/^([a-z]{3})[a-z]*\.?\s+(\d{1,2})(?:,?\s+(\d{4}))?$/))) { mo = MONTHS.indexOf(m[1]) + 1; d = +m[2]; y = +(m[3] || 0); }
+  else if ((m = s.match(/^(\d{1,2})\s+([a-z]{3})[a-z]*\.?(?:,?\s+(\d{4}))?$/))) { mo = MONTHS.indexOf(m[2]) + 1; d = +m[1]; y = +(m[3] || 0); }
+  else return null;
+  var iso = function (yr) { return yr + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0"); };
+  if (!y) { y = +today().slice(0, 4); if (iso(y) < today()) y += 1; }
+  var check = new Date(y, mo - 1, d);
+  return mo >= 1 && check.getMonth() === mo - 1 && check.getDate() === d ? iso(y) : null;
+}
+function setClosing(id, again) {
+  var j = jobById(id); if (!j) return;
+  Ask.text({ title: again ? "Couldn't read that date. Try Nov 30." : "Closing date for " + j.title, value: j.closes || "", placeholder: "Nov 30. Empty for no date.", ok: "Save" }).then(function (c) {
+    if (c === null) return;
+    var when = c.trim() ? readDate(c) : "";
+    if (when === null) return setClosing(id, true);
+    post("patch_job", { id: id, patch: { closes: when } });
+  });
+}
+function wantItems(current, set) { return ["ideal", "great", "good", "okay", "fallback"].map(function (k) { return { label: WANT_WORD[k], checked: current === k, run: function () { set(k); } }; }); }
 function menuFor(ids) {
   var items = [];
   if (ids.length > 1) {
@@ -546,6 +647,7 @@ function menuFor(ids) {
       items.push({ label: "Queue them", key: "Q", run: function () { moveJobs(ids, "queued"); } });
       items.push({ label: "Move to later", key: "L", run: function () { moveJobs(ids, "later"); } });
       items.push({ label: "Back to the inbox", run: function () { moveJobs(ids, "inbox"); } });
+      items.push({ label: "Want", sub2: wantItems(null, function (k) { post("patch_jobs", { ids: ids, patch: { want: k } }); }) });
       items.push({ label: "Skip them\u2026", key: "S", run: function () { skipJobs(ids); } });
       items.push({ sep: true });
     }
@@ -554,15 +656,14 @@ function menuFor(ids) {
     return items;
   }
   var j = jobById(ids[0]); if (!j) return items;
-  var f = resumeFile(j);
   items.push({ head: j.title, sub: j.employer + (j.closes ? " \u00b7 " + whenLong(j).toLowerCase() : "") });
   if (j.status !== "applied") items.push({ label: "Do it now", key: "D", run: function () { doNow(j.id); } });
-  items.push({ label: "Open the posting", key: "Enter", run: function () { openJob(j); } });
+  items.push({ label: "Read the saved posting", run: function () { showPosting(j.id); } });
   if ($("jobs").hidden) items.push({ label: "Show it in Jobs", run: function () { goToJob(j.id); } });
   if (["inbox", "queued", "later"].indexOf(j.status) >= 0) {
     var onUp = upIds().indexOf(j.id) >= 0;
     items.push({ label: onUp ? "Take off Up next" : "Add to Up next", key: "U", run: function () { if (onUp) removeUp([j.id]); else addUp([j.id]); } });
-    if (onUp) { items.push({ label: "Move up on Up next", run: function () { moveUp(j.id, -1); } }); items.push({ label: "Move down on Up next", run: function () { moveUp(j.id, 1); } }); }
+    items.push({ label: "Want", sub2: wantItems(j.want, function (k) { post("patch_job", { id: j.id, patch: { want: k } }); }) });
   }
   items.push({ label: j.resume_file ? "Adjust its resume" : "Make a resume for this job", run: function () { location.hash = "#resume/" + j.id; } });
   items.push({ label: j.cover_file ? "Adjust its cover letter" : "Write a cover letter" + (needsLetter(j) ? " (it asks for one)" : ""), run: function () { location.hash = "#letter/" + j.id; } });
@@ -582,17 +683,9 @@ function menuFor(ids) {
   }
   items.push({ sep: true });
   items.push({ label: "Copy link", key: "C", run: function () { copy(j.url, "the link"); } });
-  if (j.status !== "applied") items.push({ label: "Copy the email to apply with", run: function () { copy(emailOf(j), emailOf(j)); } });
-  if (j.why) items.push({ label: "Copy why I qualify", run: function () { copy(j.why, "why you qualify"); } });
-  if (f) items.push({ label: "Show the resume file", run: function () { post("reveal", { file: f }); } });
   items.push({ sep: true });
   items.push({ label: "More from " + j.employer, run: function () { $("j-q").value = j.employer; if (jTab !== "sent") jTab = "all"; jFilters = {}; saveFilters(); renderJobs(); location.hash = "#jobs"; } });
   items.push({ label: "Look up " + j.employer, run: function () { window.open("https://duckduckgo.com/?q=" + encodeURIComponent(j.employer + " " + (j.location || "")), "_blank", "noopener"); } });
-  if (j.status !== "applied") items.push({ label: "Set the closing date\u2026", run: function () {
-    Ask.text({ title: "Closing date (YYYY-MM-DD). Leave empty for none.", value: j.closes || "", ok: "Save" }).then(function (c) {
-      if (c !== null && (c === "" || /^\d{4}-\d{2}-\d{2}$/.test(c.trim()))) post("patch_job", { id: j.id, patch: { closes: c.trim() } });
-    });
-  } });
   return items;
 }
 function buildMenu(items, x, y, parent) {
@@ -652,6 +745,7 @@ function openJob(j) { post("event", { type: "opened", job_id: j.id }); window.op
 
 /* clicks, right-clicks and keys on the list */
 $("j-list").addEventListener("click", function (e) {
+  var su = e.target.closest("[data-sort-up]"); if (su) { openSort(su, true); return; }
   var li = e.target.closest(".job"); if (!li || e.target.closest("a, button, select")) return;
   var id = li.getAttribute("data-id");
   if (e.shiftKey && anchorId) {
@@ -668,16 +762,20 @@ $("j-list").addEventListener("click", function (e) {
 });
 /* Up next: drag a row to reorder */
 var dragId = null;
-$("j-list").addEventListener("dragstart", function (e) { var li = e.target.closest(".job"); if (!li || jTab !== "up") return; dragId = li.getAttribute("data-id"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragId); li.classList.add("dragging"); });
+$("j-list").addEventListener("dragstart", function (e) { var li = e.target.closest(".job"); if (!li || jTab !== "queued") return; dragId = li.getAttribute("data-id"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", dragId); li.classList.add("dragging"); });
 $("j-list").addEventListener("dragover", function (e) {
   if (!dragId) return; e.preventDefault();
-  var li = e.target.closest(".job"); document.querySelectorAll("#j-list .dropline").forEach(function (x) { x.classList.remove("dropline"); });
+  var li = e.target.closest(".job, .dayhead"); document.querySelectorAll("#j-list .dropline").forEach(function (x) { x.classList.remove("dropline"); });
   if (li && li.getAttribute("data-id") !== dragId) li.classList.add("dropline");
 });
 $("j-list").addEventListener("drop", function (e) {
   if (!dragId) return; e.preventDefault();
-  var li = e.target.closest(".job"), u = upIds(), from = u.indexOf(dragId), to = li ? u.indexOf(li.getAttribute("data-id")) : u.length - 1;
-  if (from >= 0 && to >= 0 && from !== to) { u.splice(to, 0, u.splice(from, 1)[0]); saveUp(u); }
+  var li = e.target.closest(".job, .dayhead"), u = upIds(), from = u.indexOf(dragId);
+  var to = !li ? -1 : li.classList.contains("uphead") ? 0 : li.classList.contains("resthead") ? -1 : u.indexOf(li.getAttribute("data-id"));
+  if (to >= 0) {                                                // onto Up next: it goes there, wherever it came from
+    if (from >= 0) u.splice(from, 1);
+    u.splice(to, 0, dragId); saveUp(u);
+  } else if (from >= 0) { u.splice(from, 1); saveUp(u); }       // out of Up next, into the rest of the queue
   dragId = null;
 });
 $("j-list").addEventListener("dragend", function () { dragId = null; document.querySelectorAll("#j-list .dragging, #j-list .dropline").forEach(function (x) { x.classList.remove("dragging", "dropline"); }); });
@@ -703,6 +801,7 @@ document.addEventListener("scroll", closeMenu, true);
 $("j-tabs").addEventListener("click", function (e) { var b = e.target.closest("[data-tab]"); if (!b) return; jTab = b.getAttribute("data-tab"); store("jobs-tab", jTab); picked = {}; renderJobs(); });
 $("j-filters").addEventListener("click", function (e) {
   if (e.target.closest("[data-filter-clear]")) { jFilters = {}; saveFilters(); closeMenu(); renderJobs(); return; }
+  var s = e.target.closest("[data-sort]"); if (s) { openSort(s); return; }
   var b = e.target.closest("[data-filter]"); if (b) openFilter(b.getAttribute("data-filter"), b);
 });
 $("j-q").addEventListener("input", function () { if (D) renderJobs(); });
@@ -720,7 +819,7 @@ document.addEventListener("keydown", function (e) {
   if ($("jobs").hidden || !D) return;
   var tag = (e.target.tagName || "").toLowerCase();
   if (tag === "input" || tag === "textarea" || tag === "select") { if (e.key === "Escape") e.target.blur(); return; }
-  if (e.altKey && jTab === "up" && cursor && (e.key === "ArrowUp" || e.key === "ArrowDown")) { moveUp(cursor, e.key === "ArrowUp" ? -1 : 1); e.preventDefault(); return; }
+  if (e.altKey && jTab === "queued" && cursor && upIds().indexOf(cursor) >= 0 && (e.key === "ArrowUp" || e.key === "ArrowDown")) { moveUp(cursor, e.key === "ArrowUp" ? -1 : 1); e.preventDefault(); return; }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   var k = e.key, at = shown.indexOf(cursor), ids = pickedIds().length > 1 ? pickedIds() : (cursor ? [cursor] : []);
   var j = cursor && jobById(cursor);
@@ -731,7 +830,7 @@ document.addEventListener("keydown", function (e) {
   else if (!ids.length) return;
   else if (k === " ") { setPicked([cursor], !picked[cursor]); }
   else if (k === "Enter" && j) { openJob(j); }
-  else if ((k === "u" || k === "U") && jTab !== "sent") { if (jTab === "up") removeUp(ids); else addUp(ids); }
+  else if ((k === "u" || k === "U") && jTab !== "sent") { if (ids.every(function (id) { return upIds().indexOf(id) >= 0; })) removeUp(ids); else addUp(ids); }
   else if ((k === "q" || k === "Q") && jTab !== "sent") { moveJobs(ids, "queued"); }
   else if ((k === "l" || k === "L") && jTab !== "sent") { moveJobs(ids, "later"); }
   else if ((k === "s" || k === "S") && jTab !== "sent") { skipJobs(ids); }
@@ -759,6 +858,10 @@ function renderPathBoards() {
   });
 }
 
+function renderKitWhy() {                                       // for the job at the top of Today (it left the right-click menu, 2026-11-03)
+  var j = todayQueue()[0];
+  $("k-why").innerHTML = j && j.why ? '<div class="kit"><div class="head"><span class="label">Why you qualify: ' + esc(j.title) + " at " + esc(j.employer) + '</span><button class="copy" data-act="copy">Copy</button></div><pre>' + esc(j.why) + "</pre></div>" : "";
+}
 function renderKit(kit) {
   $("k-list").innerHTML = kit.map(function (g) {
     return "<h2>" + esc(g.h) + "</h2>" + (g.note ? '<p class="lede">' + esc(g.note) + "</p>" : "") +
@@ -793,6 +896,8 @@ function act(a, el, e) {
     case "moment-next": moment = null; renderToday(); break;
     case "focus": store("focus", id); renderToday(); window.scrollTo({ top: 0, behavior: "smooth" }); break;
     case "focus-go": doNow(id); break;
+    case "read-posting": showPosting(id); break;
+    case "set-closes": setClosing(id); break;
     case "later": post("patch_job", { id: id, patch: { status: "later" } }); break;
     case "queue": post("patch_job", { id: id, patch: { status: "queued" } }); break;
     case "swap-addr": var ji = jobById(id); store("addr:" + id, String((addrIndex(ji) + 1) % ADDRS.length)); renderToday(); break;
@@ -860,7 +965,6 @@ document.addEventListener("click", function (e) {
 });
 document.addEventListener("change", function (e) {
   var t = e.target;
-  if (t.classList.contains("sortpick")) { sortKey = t.value; store("sort-v2", sortKey); render(); return; }
   var id = t.getAttribute("data-outcome");
   if (id) post("patch_job", { id: id, patch: { outcome: t.value } });
 });
@@ -900,6 +1004,7 @@ function show() {
   });
   window.scrollTo(0, 0);
   if (h === "jobs" && pendingJump && D) { renderJobs(); jumpToRow(); }
+  if (h === "today" && D) autoDocs(todayQueue()[0]);
 }
 // the Career paths pages are the person's own (data/paths.html); without that file the menu has no Career paths
 function loadPaths() {
@@ -963,7 +1068,7 @@ Scene.labels(function (k) {
   return what + ". " + dm(v.date) + ".";
 });
 fetch("/kit.json").then(function (r) { return r.json(); }).then(renderKit).catch(function () {});
-window.App = { data: function () { return D; }, post: post, setData: function (d) { D = d; render(); }, goToJob: goToJob,
+window.App = { data: function () { return D; }, post: post, setData: function (d) { D = d; render(); }, goToJob: goToJob, posting: postingFor,
   searchJobs: function (q) { jTab = "all"; store("jobs-tab", jTab); jFilters = {}; saveFilters(); $("j-q").value = q; renderJobs(); location.hash = "#jobs"; } };   // for the resume builder (resume.js)
 show(); load().then(function () { if (window.SkillsPage) SkillsPage.load(); });
 fetch("/api/profile", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (p) {

@@ -1,13 +1,14 @@
 /* Resume builder (2026-10-27). Picks bullets for a job by fixed rules (no AI), shows the page live in the look
    of his .odt resumes, measures whether it fits on one page, suggests cuts when it doesn't, and has the server
    lay out the real PDF from the .odt (app/make_resumes.py), checking its page count.
-   Scoring: each bullet's keywords and topic words are looked for in the job's title (+3 each), the rest of its
-   text and any pasted posting (+1 each), plus 2 if the bullet's topic is one of the job's paths. Starred bullets
-   always go in; blocked ones never do. The library is data/resume.json. */
+   Scoring: each bullet's keywords and topic words are looked for in the job's title (+3 each) and the posting's
+   requirements (+2 each); its own keywords also in the rest of the posting (+1 each: a whole posting has too many
+   common words for the broad topic words to mean much there). Plus 2 if the bullet's topic is one of the job's paths. The posting is the one saved in data/postings/ (2026-11-03), or the text pasted here; without either, the
+   job's notes. Starred bullets always go in; blocked ones never do. The library is data/resume.json. */
 (function () {
 "use strict";
 
-var LIB = null, job = null, spec = null, SC = {}, CTX = null, pendingSave = null;
+var LIB = null, job = null, spec = null, SC = {}, CTX = null, pendingSave = null, POSTING = null;
 var PAGE_H = (11 - 0.5 - 0.2374) * 96;           // the .odt's text area, in CSS px
 var MIN_ADD = 2;                                   // a bullet needs 2+ points to be added (1 point was filler: a stray word match)
 var LINE = 14.15 * 96 / 72;                       // one line: 12 pt Garamond at 105% of its natural height, measured in the real PDFs
@@ -25,10 +26,12 @@ function has(hay, term) {
   return hay.indexOf(term) >= 0;
 }
 function context() {
-  var j = job || {};
+  var j = job || {}, pasted = spec && spec.posting, P = !pasted && POSTING && POSTING.reliable ? POSTING : null;   // what's pasted wins over what's saved
   return {
     title: (j.title || "").toLowerCase(),
-    body: [j.notes, j.why, j.tag, spec && spec.posting].join(" ").toLowerCase(),   // not the employer or address: "ITS" in a state agency's name isn't transit ITS
+    req: P ? (P.required || "").toLowerCase() : "",
+    full: !!P || !!pasted,
+    body: (P ? ((P.required || "") + "\n" + (P.rest || "")).trim() || P.text : pasted || [j.notes, j.why, j.tag].join(" ")).toLowerCase(),   // not the employer or address: "ITS" in a state agency's name isn't transit ITS
     paths: j.paths || []
   };
 }
@@ -39,9 +42,9 @@ function termsFor(topics, kw) {
   return Object.keys(t);
 }
 function scoreOf(topics, kw) {
-  var s = 0, hits = [];
+  var s = 0, hits = [], own = {}; (kw || []).forEach(function (k) { own[k] = 1; });
   termsFor(topics, kw).forEach(function (t) {
-    if (has(CTX.title, t)) { s += 3; hits.push(t); } else if (has(CTX.body, t)) { s += 1; hits.push(t); }
+    if (has(CTX.title, t)) { s += 3; hits.push(t); } else if (CTX.req && has(CTX.req, t)) { s += 2; hits.push(t); } else if ((own[t] || !CTX.full) && has(CTX.body, t)) { s += 1; hits.push(t); }
   });
   var pt = {}; CTX.paths.forEach(function (p) { (LIB.pathTopics[p] || []).forEach(function (x) { pt[x] = 1; }); });
   if (topics.some(function (x) { return pt[x]; })) { s += 2; hits.push("your path"); }
@@ -156,7 +159,7 @@ function orderItems(text) {
 }
 // the posting's words (from the scoring vocabulary) that the resume never uses: add them only where they're true
 function gapWords(c) {
-  var vocab = {}, text = JSON.stringify(c).toLowerCase(), hay = CTX.title + " " + CTX.body, out = [];
+  var vocab = {}, text = JSON.stringify(c).toLowerCase(), hay = CTX.title + " " + (CTX.req || CTX.body), out = [];   // what they ask for, not every word on the page
   var skip = { lead: 1, field: 1, host: 1, its: 1, data: 1, application: 1, train: 1, research: 1, associate: 1, server: 1, sales: 1, member: 1, operations: 1, install: 1, engineer: 1, software: 1 };
   Object.keys(LIB.related).forEach(function (k) { LIB.related[k].forEach(function (w) { vocab[w] = 1; }); });
   LIB.entries.forEach(function (e) { e.bullets.forEach(function (b) { b.kw.forEach(function (w) { vocab[w] = 1; }); }); });
@@ -229,6 +232,7 @@ function render() {
   $("rb-loc").value = spec.location || LIB.header.location;
   $("rb-pfirst").checked = !!spec.projectsFirst;
   $("rb-posting").value = spec.posting || "";
+  $("rb-posting-sum").textContent = postingLine();
 }
 function renderSide() {
   var html = "";
@@ -357,6 +361,49 @@ document.addEventListener("change", function (ev) {
   if (el.id === "rb-preset") { if (el.value) { spec = clone(LIB.presets[el.value]); spec.edits = {}; spec.posting = ""; el.value = ""; changed(); } return; }
 });
 
+function postingLine() {
+  if (!job || (spec && spec.posting)) return spec && spec.posting ? "Using the text you pasted" : "Paste a posting's text";
+  if (POSTING && POSTING.reliable) return "Using the saved posting (" + (POSTING.text.match(/\S+/g) || []).length + " words). Paste here to replace it";
+  return "Couldn't read this posting" + (POSTING && POSTING.problem ? " (" + POSTING.problem + ")" : "") + ". Paste its text here for better picks";
+}
+/* Made without opening the page, for Today (2026-11-03, his choice): the same picks, from the saved posting. If the real PDF
+   runs over a page, the weakest bullet goes and it's made again; after three tries the job keeps its premade resume. */
+function weakest(sp, scores) {
+  var low = null;
+  (sp.entries || []).concat(sp.projects || []).forEach(function (sel) {
+    var e = entryById(sel.id);
+    sel.bullets.forEach(function (ref) {
+      var s = (scores[e.id + "/" + ref.split("~")[0]] || { s: 0 }).s;
+      if (bulletOf(e, ref).star || sel.bullets.length <= Math.max(1, e.min || 1)) return;
+      if (!low || s < low.s) low = { sel: sel, ref: ref, s: s };
+    });
+  });
+  return low;
+}
+function makeUntilItFits(id, sp, scores, tries) {
+  return fetch("/api/resume_make", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: id, spec: sp, content: forServer(resolve(sp)), auto: true }) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "error"); return j; }); })
+    .then(function (j) {
+      if (j.result.pages === 1) { window.App.setData(j.data); return j.result; }
+      var cut = tries < 3 && weakest(sp, scores);
+      if (!cut) return null;
+      cut.sel.bullets.splice(cut.sel.bullets.indexOf(cut.ref), 1);
+      return makeUntilItFits(id, sp, scores, tries + 1);
+    });
+}
+function autoMake(jobId, posting) {
+  var ready = LIB ? Promise.resolve() : fetch("/api/resume", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (l) { LIB = l; });
+  return ready.then(function () { return document.fonts ? document.fonts.ready : null; }).then(function () {
+    var j = window.App.data().jobs.find(function (x) { return x.id === jobId; });
+    if (!j || !posting || !posting.reliable) return null;
+    var was = [job, spec, POSTING];                            // the page may be open on another job: leave it as it was
+    job = j; spec = null; POSTING = posting;
+    var sp = suggest(), scores = SC;
+    job = was[0]; spec = was[1]; POSTING = was[2];
+    if (spec) rescore();
+    return makeUntilItFits(j.id, sp, scores, 0);
+  });
+}
 function makePDF() {
   var btn = $("rb-make"), note = $("rb-made");
   btn.disabled = true; note.textContent = "Making the PDF from your .odt… (a few seconds)";
@@ -393,7 +440,8 @@ function open(jobId) {
     render();
   };
   if (!window.App.data()) return setTimeout(function () { open(jobId); }, 200);
-  if (LIB) go(); else fetch("/api/resume", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (l) { LIB = l; go(); });
+  var withPosting = function () { (jobId ? window.App.posting(jobId) : Promise.resolve(null)).then(function (p) { POSTING = p; go(); }); };
+  if (LIB) withPosting(); else fetch("/api/resume", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (l) { LIB = l; withPosting(); });
 }
 /* jump between jobs: a sticky row of names above the checklist (lit where you are), J and K. (2026-11-02, he asked: not in the sidebar too.) */
 function tocName(e) {
@@ -446,5 +494,5 @@ document.addEventListener("click", function (ev) {
   if (ev.target.id === "rb-make") makePDF();
   if (ev.target.id === "rb-suggest" && LIB) { var keep = spec ? spec.posting : ""; spec = { posting: keep }; spec = suggest(); spec.posting = keep; changed(); }
 });
-window.ResumeBuilder = { open: open, leave: closePreview };
+window.ResumeBuilder = { open: open, leave: closePreview, autoMake: autoMake };
 })();

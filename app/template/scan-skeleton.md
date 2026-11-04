@@ -39,6 +39,9 @@ Every job you add gets `want`, separate from `match` (how qualified they are):
 ### Good (`want: "good"`)
 <<FILL: solid jobs they'd be glad to have.>>
 
+### Great and Okay
+Use `want: "great"` for a job between Ideal and Good, and `want: "okay"` for one between Good and Fallback. They can change any job's level from the right-click menu.
+
 ### Fallback (`want: "fallback"`)
 <<FILL: jobs they'd take for income or a foot in the door. At most a fifth of each run.>>
 
@@ -65,7 +68,10 @@ Put new jobs in a JSON list in a temp file in your scratchpad (not in the tracke
 
 ```bash
 python app/jobs_cli.py add <temp-file>.json
+python app/postings.py
 ```
+
+**Read every job's posting.** Never add a job from a search result or a list alone: open the posting and write `why`, `match`, `pay` and `hours` from what it says, in specific words, never a template. `postings.py` then saves each new posting's full text in `data/postings/` (the resume and letter builders pick from it), corrects pay, hours, years and closed status from what the posting states, and prints any it couldn't read. For each one it couldn't read that is `want: "ideal"` or `match` 4 or 5: read the posting yourself and fix the job with `jobs_cli set`. If a posting sits behind a bot check, say so in the job's `notes`; don't get around it.
 
 Each job:
 
@@ -84,7 +90,7 @@ Each job:
 }
 ```
 
-- `want`: `ideal`, `good` or `fallback` (section 5).
+- `want`: `ideal`, `great`, `good`, `okay` or `fallback` (section 5).
 - `fit`: `now` (they can apply today) or `stretch`.
 - `salary_min`: the bottom of the range as a yearly number (hourly x 2080). Omit if no pay is listed.
 - `closes`: ISO date, or omit.

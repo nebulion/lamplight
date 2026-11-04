@@ -26,10 +26,11 @@ JOB_FIELDS = {
     "location", "tag", "match", "salary_min", "speed", "toward_planning",
     "email_used", "resume_file", "resume_spec",   # resume_*: the custom resume made for this job in the builder
     "cover_letter", "cover_file", "cover_spec",   # cover_letter: the posting asks for one; cover_*: the letter made in the builder
-    "want",                                       # how much they want it (ideal / good / fallback), from their scan (D42)
+    "want",                                       # how much they want it (ideal / great / good / okay / fallback), from their scan or the right-click menu (D42, D55)
     "hours",                                      # full-time / part-time / seasonal / temporary (the Hours filter)
+    "posting", "asks",                            # posting: read / unread / gone (its text is in data/postings/); asks: what it requires, in a line
 }
-WANTS = {"ideal", "good", "fallback"}
+WANTS = {"ideal", "great", "good", "okay", "fallback"}
 # a new person's empty tracker (the first-run page fills in the settings)
 EMPTY = {
     "version": 1,

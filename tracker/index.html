@@ -53,7 +53,6 @@
   <p class="lede" id="j-count"></p>
   <div class="tabs" role="tablist" id="j-tabs"></div>
   <div class="tools">
-    <span id="j-sort">Order by <select class="sortpick" aria-label="Order by"></select></span>
     <span><input id="j-q" placeholder="Search" aria-label="Search jobs" autocomplete="off"></span>
   </div>
   <div class="filters" id="j-filters" aria-label="Filters"></div>
@@ -92,9 +91,9 @@
     <span>Location <input id="rb-loc" aria-label="Location line"></span>
     <label><input type="checkbox" id="rb-pfirst"> Projects before experience</label>
   </div>
-  <details class="rb-posting"><summary>Paste the posting's text (optional: better picks)</summary>
+  <details class="rb-posting"><summary id="rb-posting-sum">Paste a posting's text</summary>
     <textarea id="rb-posting" rows="6" aria-label="The posting's text"></textarea></details>
-  <p class="small">Picks are scored by fixed rules, not AI: each bullet's words found in the job's title count 3, elsewhere in its text or the pasted posting 1, and 2 more if it's on the job's path. Click a bullet to edit it. J and K jump between jobs.</p>
+  <p class="small">Picks are scored by fixed rules, not AI: each bullet's words found in the job's title count 3, in the posting's requirements 2, its own keywords elsewhere in the posting 1, and 2 more if it's on the job's path. Click a bullet to edit it. J and K jump between jobs.</p>
   <p class="small rb-gaps" id="rb-gaps" aria-live="polite"></p>
   <ul class="rb-row" id="rb-row" aria-label="Jump to"></ul>
   <div id="rb-list"></div>
@@ -111,8 +110,8 @@
       <div class="rb-paperbox" id="rb-paperbox"><div class="rpaper" id="rb-paper"></div></div>
     </div>
   </div>
-  <div class="rpaper rb-measure" id="rb-measure" aria-hidden="true"></div>
 </section>
+<div class="rpaper rb-measure" id="rb-measure" aria-hidden="true"></div>
 
 <!-- ============ COVER LETTER BUILDER ============ -->
 <section id="letter" hidden>
@@ -130,7 +129,7 @@
     <span>Your city <input id="cl-loc" aria-label="Your city in the letter" style="width:10em"></span>
   </div>
   <p class="sig-line" id="cl-sig"></p>
-  <details class="rb-posting"><summary>Paste the posting's text (optional: better picks)</summary>
+  <details class="rb-posting"><summary id="cl-posting-sum">Paste a posting's text</summary>
     <textarea id="cl-posting" rows="6" aria-label="The posting's text"></textarea></details>
   <div id="cl-list"></div>
   <div class="actions rb-end"><button class="btn primary" id="cl-preview" type="button">Preview</button> <button class="btn" id="cl-make" type="button">Make the PDF</button></div>
@@ -158,6 +157,7 @@
 <section id="kit" hidden>
   <h1>Paste kit</h1>
   <p class="lede">The boxes application forms ask for again and again. Copy, paste, move on.</p>
+  <div id="k-why"></div>
   <div id="k-list"></div>
 </section>
 

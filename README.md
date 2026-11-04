@@ -42,7 +42,7 @@ Your browser opens at `http://localhost:8765`. The first time, a short setup ask
 3. how many applications a day, and when;
 4. your resume: Claude turns it into a library the resume builder picks from. It copies your wording; it doesn't rewrite it.
 
-Then comes **the job interview**: about 15 minutes of questions on what you'd love, what you'd take, what you'd never do, and how far to reach. Claude turns your answers into the instructions your job search follows. Every job it finds is marked **ideal**, **good** or **fallback**.
+Then comes **the job interview**: about 15 minutes of questions on what you'd love, what you'd take, what you'd never do, and how far to reach. Claude turns your answers into the instructions your job search follows. Every job it finds gets a Want level, from **ideal** to **fallback**, and you can change any of them.
 
 ### 5. Getting jobs in
 - **Claude Pro or higher:** the end of the interview shows a prompt. In the Claude desktop app, open **Scheduled tasks**, create a daily task with that prompt, and run it once. It fills your Inbox every morning while the app is open.
@@ -74,7 +74,7 @@ Then comes **the job interview**: about 15 minutes of questions on what you'd lo
   - In the open street (click the house in the sidebar): **A / D** walk, **B** gets on the bike, **W / S** pan, **↑ / ↓** tilt, **← / →** turn, the wheel zooms, **Esc** closes.
 - **Resume** and **Cover letter** build a one-page resume and a short letter for a job, from your own words, and make the PDFs.
 - **The arrow at the top of the sidebar** makes it smaller, in two steps.
-- **Up next** (a tab of Jobs) is your own hand-ordered list; Today takes from it first. Right-click a job anywhere for everything you can do with it.
+- **Up next**, at the top of the Queued tab, is your own hand-ordered list; Today takes from it first. Right-click a job anywhere for everything you can do with it.
 - **Addresses:** add `"addresses"` to `data/profile.json` to make a resume and letter per address. Mark one `"drop_first": true` and its file name leaves out your first name, so you can tell them apart.
 - **Skills:** add `data/skills.json` for a page of certificates, courses and books. List Markdown study plans under `"study_plans"` in `data/profile.json` and it reads their tick boxes. Finished sessions add stars to the street's sky, and certificates floodlight its church towers.
 
