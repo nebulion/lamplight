@@ -1,6 +1,6 @@
 /* Find jobs with Claude, and paste a job-alert email (Inbox; SHARE-DESIGN phases 4 and 5a). For any plan, the free one
    too: the person carries a prompt to Claude and pastes its answer back; each job is checked before it's added. An alert
-   email pasted here (LinkedIn, Indeed, USAJobs, governmentjobs.com) adds its job links as unchecked Inbox jobs, and the
+   email pasted here adds its job links as unchecked Inbox jobs, and the
    next batch from Claude checks them first. */
 (function () {
 "use strict";
@@ -17,7 +17,7 @@ root.innerHTML =
   '<li>Paste Claude\'s whole answer here:<textarea id="fd-reply" rows="5"></textarea></li></ol>' +
   '<p><button type="button" class="btn" id="fd-import">Add these jobs</button> <span class="small" id="fd-out"></span></p>' +
   '<h3 class="ch-group">Job-alert emails</h3>' +
-  '<p class="small">Open a job alert from LinkedIn, Indeed, USAJobs or governmentjobs.com, select all, copy, and paste it into the box. Its jobs land in the Inbox unchecked; your next Claude batch checks them first.</p>' +
+  '<p class="small">Open a job-alert email, select all, copy, and paste it into the box. Its jobs land in the Inbox unchecked; your next Claude batch checks them first.</p>' +
   '<div id="fd-alert" class="fd-paste" contenteditable="true" role="textbox" aria-label="Paste a job-alert email here">Paste a job-alert email here</div>' +
   '<p class="small" id="fd-aout"></p>';
 var $ = function (id) { return document.getElementById(id); };

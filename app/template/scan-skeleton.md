@@ -23,7 +23,7 @@ python app/jobs_cli.py list --status queued,inbox,later
 
 ## 3. What to search, and where
 
-<<FILL: from the interview. The fields and job titles to search (with the synonyms boards use), the cities in their order, on-site/hybrid/remote, the kinds of employer to favour and avoid, full/part-time/seasonal, and good boards to try for each (company career pages, city and state portals, Greenhouse/Lever/Ashby boards, sector boards). Rotate cities and boards between runs. Plain bullet lists.>>
+<<FILL: from the interview. The fields and job titles to search (with the synonyms boards use), the cities in their order, on-site/hybrid/remote, the kinds of employer to favour and avoid, full/part-time/seasonal, and good boards to try for each (company career pages, city and state portals, company job boards, sector boards). Rotate cities and boards between runs. Plain bullet lists.>>
 
 ## 4. Who they are (for the fit case)
 

@@ -52,7 +52,7 @@ Then comes **the job interview**: about 15 minutes of questions on what you'd lo
   3. paste Claude's answer back.
 
   That's a batch of about 12 jobs, each checked before it's added.
-- **Job alerts:** set up alerts on LinkedIn, Indeed, USAJobs or governmentjobs.com. When one arrives, select all of the email, copy, and paste it into the **Job-alert emails** box on the Inbox. Its jobs land unchecked, and your next Claude batch checks them first.
+- **Job alerts:** set up alerts on the job sites you use. When one arrives, select all of the email, copy, and paste it into the **Job-alert emails** box on the Inbox. Its jobs land unchecked, and your next Claude batch checks them first.
 
 ## What it looks like
 

@@ -3,7 +3,7 @@
 find_prompt()         a prompt for any Claude chat (the free plan too): their scan's search and tiers, the jobs already in the
                       tracker to skip, the alert jobs to check first, and the exact answer format
 import_jobs(reply)    Claude's answer, checked job by job, into the tracker (alert jobs it checked are filled in, not doubled)
-import_alerts(html)   a pasted job-alert email (LinkedIn, Indeed, USAJobs, governmentjobs.com): its job links become
+import_alerts(html)   a pasted job-alert email: its job links become
                       unchecked Inbox jobs. Their own hard no's filter them by fixed rules; Claude checks the rest next time.
 """
 import html as htmlmod
@@ -13,15 +13,13 @@ import re
 from html.parser import HTMLParser
 
 import person
+import postings
 import store
 
 BATCH = 12
-SITES = [  # (name, link pattern, the plain link it becomes)
-    ("LinkedIn", re.compile(r"https?://(?:[a-z]+\.)?linkedin\.com/(?:comm/)?jobs/view/(\d+)"), "https://www.linkedin.com/jobs/view/{0}"),
-    ("Indeed", re.compile(r"https?://(?:[a-z]+\.)?indeed\.com/[^\"'\s<>]*?[?&]jk=([0-9a-f]{8,})"), "https://www.indeed.com/viewjob?jk={0}"),
-    ("USAJobs", re.compile(r"https?://(?:www\.)?usajobs\.gov/(?:job|GetJob/ViewDetails)/(\d+)"), "https://www.usajobs.gov/job/{0}"),
-    ("governmentjobs.com", re.compile(r"https?://(?:www\.)?governmentjobs\.com/careers/([a-z0-9_-]+)/jobs/(\d+)", re.I), "https://www.governmentjobs.com/careers/{0}/jobs/{1}"),
-]
+# (name, link pattern, the plain link it becomes). Particular sites can go in data/boards.py as ALERT_SITES; the code here names none.
+ANY_JOB_LINK = ("Job", re.compile(r"(?i)^(https?://[^\s\"'<>?#]*/(?:jobs?|careers?|positions?|vacanc\w+|openings?)/[^\s\"'<>?#]*\d{3,}[^\s\"'<>?#]*)"), "{0}")
+SITES = getattr(postings.BOARDS, "ALERT_SITES", None) or [ANY_JOB_LINK]
 UNCHECKED = "From a job-alert email; Claude hasn't checked it yet."
 
 
@@ -138,11 +136,8 @@ class _Links(HTMLParser):
             self.links[-1]["after"].append(t)
 
 
-def import_alerts(html):
-    html = html if isinstance(html, str) else ""
+def _alert_jobs(html):
     p = _Links(); p.feed(html)
-    prefs = person.load().get("prefs") or {}
-    nowords = [w.strip().lower() for w in re.split(r"[,;]", prefs.get("noWords", "")) if w.strip()]
     found = {}
     for a in p.links:
         href = htmlmod.unescape(a["href"])
@@ -159,6 +154,13 @@ def import_alerts(html):
             found[url] = {"site": site, "title": title or prev.get("title", ""), "employer": prev.get("employer") or (rest[0] if rest else ""),
                           "location": prev.get("location") or (rest[1] if len(rest) > 1 else "")}
             break
+    return found
+
+
+def import_alerts(html):
+    found = _alert_jobs(html if isinstance(html, str) else "")
+    prefs = person.load().get("prefs") or {}
+    nowords = [w.strip().lower() for w in re.split(r"[,;]", prefs.get("noWords", "")) if w.strip()]
     report = {"found": len(found), "added": 0, "known": 0, "skipped": []}
 
     def apply(doc):
