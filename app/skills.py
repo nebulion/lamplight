@@ -3,12 +3,14 @@
 A study plan is a Markdown file named in data/profile.json ("study_plans": [{"id", "name", "file"}]): "### Session N"
 headings with "- [x]" tick boxes under them. Their notes stay the one source; this never writes to that file.
 A session counts as finished when every box is ticked, leaving out the daily flashcards ("Anki..."), which repeat.
+Video courses ("courses" in data/profile.json, see courses.py) come along as summaries: minutes watched, this week's minutes.
 """
 import datetime as dt
 import json
 import os
 import re
 
+import courses
 import person
 
 ITEMS = os.path.join(person.DATA, "skills.json")
@@ -45,9 +47,11 @@ def read_plan(plan):
 
 def load():
     if not os.path.isfile(ITEMS):
-        return {"groups": [], "plans": [], "exists": False}
+        return {"groups": [], "plans": [], "courses": [], "exists": False}
     with open(ITEMS, encoding="utf-8") as f:
         doc = json.load(f)
-    doc["plans"] = [read_plan(p) for p in person.load().get("study_plans") or []]
+    me = person.load()
+    doc["plans"] = [read_plan(p) for p in me.get("study_plans") or []]
+    doc["courses"] = [courses.summary(c) for c in me.get("courses") or []]
     doc["exists"] = True
     return doc

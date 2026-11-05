@@ -1,6 +1,7 @@
 /* The Skills page (2026-11-02, he asked): certificates, courses and books that help across job paths, with a status he sets,
    and study plans read from his own notes (never written to). Finished sessions add stars to the street's sky and passed
-   certificates floodlight its church towers; application lights stay for applications only. */
+   certificates floodlight its church towers; application lights stay for applications only.
+   Video courses (2026-11-05, course.js): played here, a note per video in his notes folder, and a star per so many minutes watched. */
 (function () {
 "use strict";
 var DOC = null;
@@ -18,7 +19,7 @@ function allItems() { return DOC ? DOC.groups.reduce(function (a, g) { return a.
 function counts() {
   var st = statuses();
   return {
-    stars: DOC ? DOC.plans.reduce(function (n, p) { return n + (p.finished || 0); }, 0) : 0,
+    stars: DOC ? DOC.plans.reduce(function (n, p) { return n + (p.finished || 0); }, 0) + (DOC.courses || []).reduce(function (n, c) { return n + (c.stars || 0); }, 0) : 0,
     towers: allItems().filter(function (it) { return it.cert && st[it.id] === "done"; }).length
   };
 }
@@ -44,12 +45,20 @@ function row(it) {
     '<p class="sk-why">' + esc(it.why) + (it.note ? " <b>" + esc(it.note) + "</b>" : "") + "</p>" +
     '<p class="sk-step">' + (it.next ? "Next: " + esc(it.next) : "") + (it.links || []).map(function (l) { return ' <a href="' + esc(l[1]) + '" target="_blank" rel="noopener">' + esc(l[0]) + "</a>"; }).join(" &middot;") + "</p></div>";
 }
+function part(root, cls) {                               // the page's parts; the courses' part keeps its players between redraws
+  var el = root.querySelector(":scope > ." + cls);
+  if (!el) { el = document.createElement("div"); el.className = cls; root.appendChild(el); }
+  return el;
+}
 function render() {
   var root = $("skills"); if (!root || !DOC) return;
-  var c = counts();
-  root.innerHTML = "<h1>Skills</h1>" +
-    '<p class="lede">What helps across job paths. Each finished session adds a star to the street\'s sky (' + c.stars + " so far). Each certificate you mark Done floodlights a church tower (" + Math.min(c.towers, 4) + " of 4).</p>" +
-    DOC.plans.map(planPanel).join("") +
+  var c = counts(), cs = DOC.courses || [];
+  var starWhy = cs.length ? "Each finished session, and every " + (cs[0].star_minutes || 30) + " minutes of course video, adds a star" : "Each finished session adds a star";
+  part(root, "sk-top").innerHTML = "<h1>Skills</h1>" +
+    '<p class="lede">What helps across job paths. ' + starWhy + " to the street's sky (" + c.stars + " so far). Each certificate you mark Done floodlights a church tower (" + Math.min(c.towers, 4) + " of 4).</p>";
+  var box = part(root, "sk-courses");
+  if (window.CoursePanel) cs.forEach(function (k) { var el = CoursePanel.mount(k.id); if (el.parentNode !== box) box.appendChild(el); });
+  part(root, "sk-rest").innerHTML = DOC.plans.map(planPanel).join("") +
     DOC.groups.map(function (g) { return "<h2>" + esc(g.name) + "</h2>" + g.items.map(row).join(""); }).join("");
 }
 function load() {

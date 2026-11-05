@@ -6,6 +6,7 @@ to data/jobs.json. Listens on localhost only.
 import base64
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -17,7 +18,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import finder  # noqa: E402
 import firstrun  # noqa: E402
 import person  # noqa: E402
-import skills
+import skills  # noqa: E402
+import courses  # noqa: E402
 import store  # noqa: E402
 import make_resumes  # noqa: E402
 import postings  # noqa: E402
@@ -41,6 +43,7 @@ STATIC = {  # the only files the server hands out
     "finder.js": "text/javascript; charset=utf-8",
     "ask.js": "text/javascript; charset=utf-8",
     "skills.js": "text/javascript; charset=utf-8",
+    "course.js": "text/javascript; charset=utf-8",
     "interview.json": "application/json; charset=utf-8",
     "favicon.svg": "image/svg+xml",
     "scene3d.js": "text/javascript; charset=utf-8",
@@ -126,8 +129,62 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _video(self, path):
+        """A course video, in pieces as the player asks (HTTP Range), so it can start at once and seek anywhere."""
+        cid, _, rel = path.removeprefix("/video/").partition("/")
+        try:
+            full, ctype = courses.video_file(urllib.parse.unquote(cid), urllib.parse.unquote(rel))
+        except ValueError:
+            return self._send(404, {"error": "not found"})
+        size = os.path.getsize(full)
+        start, end = 0, size - 1
+        m = re.match(r"bytes=(\d*)-(\d*)$", self.headers.get("Range") or "")
+        if m and (m.group(1) or m.group(2)):
+            if m.group(1):
+                start = int(m.group(1))
+                end = min(int(m.group(2)), size - 1) if m.group(2) else size - 1
+            else:                                         # the last N bytes
+                start = max(size - int(m.group(2)), 0)
+            if start > end or start >= size:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            self.send_response(206)
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        else:
+            self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(end - start + 1))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        try:
+            with open(full, "rb") as f:
+                f.seek(start)
+                left = end - start + 1
+                while left > 0:
+                    chunk = f.read(min(1 << 18, left))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    left -= len(chunk)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            self.close_connection = True                  # the player moved on (a seek, another video): normal
+
     def do_GET(self):
         path = self.path.split("?")[0]
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if path.startswith("/video/"):
+            return self._video(path)
+        try:
+            if path == "/api/course":                      # one video course: its videos, and how much of each was watched
+                return self._send(200, courses.load(query.get("id", [""])[0]))
+            if path == "/api/note":                        # one video's note, from their notes folder
+                return self._send(200, courses.note(query.get("course", [""])[0], query.get("video", [""])[0]))
+        except (ValueError, OSError) as e:
+            return self._send(400, {"error": str(e)})
         if path == "/api/data":
             return self._send(200, store.load())
         if path == "/api/skills":                           # the Skills page: their list, and study plans read from their notes
@@ -221,6 +278,15 @@ class Handler(BaseHTTPRequestHandler):
                 if os.path.isfile(make_resumes.SIGNATURE):
                     os.remove(make_resumes.SIGNATURE)
                 return self._send(200, {"result": {"ok": True}})
+            if name == "watch":                             # a course video: the stretches just played, and where it is
+                return self._send(200, {"result": courses.watch(body)})
+            if name == "durations":                         # course videos' lengths, read by the page
+                return self._send(200, {"result": courses.durations(body)})
+            if name == "note_save":                         # one video's note, written to their notes folder
+                try:
+                    return self._send(200, {"result": courses.note_save(body)})
+                except courses.Conflict as c:              # changed in their notes app since the page read it
+                    return self._send(409, {"error": "changed elsewhere", "note": json.loads(str(c))})
             if name not in ACTIONS:
                 return self._send(404, {"error": f"unknown action {name}"})
             result = store.change(lambda d: ACTIONS[name](d, body))

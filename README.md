@@ -77,6 +77,14 @@ Then comes **the job interview**: about 15 minutes of questions on what you'd lo
 - **Up next**, at the top of the Queued tab, is your own hand-ordered list; Today takes from it first. Right-click a job anywhere for everything you can do with it.
 - **Addresses:** add `"addresses"` to `data/profile.json` to make a resume and letter per address. Mark one `"drop_first": true` and its file name leaves out your first name, so you can tell them apart.
 - **Skills:** add `data/skills.json` for a page of certificates, courses and books. List Markdown study plans under `"study_plans"` in `data/profile.json` and it reads their tick boxes. Finished sessions add stars to the street's sky, and certificates floodlight its church towers.
+- **Video courses:** list a course under `"courses"` in `data/profile.json` and the Skills page plays it, writes a note per video into your notes folder (an Obsidian vault works), and counts minutes of video watched:
+  ```json
+  "courses": [{"id": "ccna", "name": "CCNA course",
+               "videos": "C:\\Users\\you\\Videos\\CCNA Course Videos",
+               "notes": "C:\\Users\\you\\vault\\Work\\CCNA",
+               "week_minutes": 300, "finish_by": "2027-03-01", "star_minutes": 30}]
+  ```
+  Sub-folders become sections, and each video's note is a `.md` file with the same name and folder. The speed button cycles 0.75× to 2× (shift-click goes back; `[` and `]` work too). **Add time** puts the video's time in the note, and times in the note become buttons that jump there. Rewatching a stretch doesn't count twice. Every `star_minutes` minutes watched adds a star. Progress is kept in `data/watched.json`.
 
 ## If something's off
 - **The page won't open:** the little server isn't running. Open it again (step 4). To see an error, run `python app/server.py` in a terminal in the folder.
